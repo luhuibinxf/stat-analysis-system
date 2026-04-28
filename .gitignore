@@ -1,0 +1,12 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.log
+*.exe
+*.dll
+*.pdb
+*.cache
+config.dat
+server_config.dat
