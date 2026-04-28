@@ -133,7 +133,7 @@ namespace DbProcedureCaller.Services
                     ISNULL(t.TECHNICIAN_NAME, '') AS 技师,
                     dbo.fn_GetDepartmentName(t.EXAM_CATEGORY_NAME) AS 执行科室,
                     ISNULL(t.EXAM_CATEGORY_NAME, '') AS 检查类型,
-                    ISNULL(ti.PATIENT_TYPE, '') AS 病人类型,
+                    ISNULL(t.ENCOUNTER_TYPE_NO, '') AS 病人类型,
                     CASE
                         WHEN r.REPORT_RESULT LIKE '%阳性%' THEN '阳性'
                         WHEN r.REPORT_RESULT LIKE '%阴性%' THEN '阴性'
@@ -145,7 +145,6 @@ namespace DbProcedureCaller.Services
                     ISNULL(AVG(CASE WHEN r.REPORT_RESULT LIKE '%阳性%' THEN 100.0 ELSE 0 END), 0) AS 阳性率
                 FROM EXAM_TASK t
                 LEFT JOIN EXAM_REPORT r ON t.EXAM_TASK_ID = r.EXAM_TASK_ID
-                LEFT JOIN EXAM_TASK_INFO ti ON t.EXAM_TASK_ID = ti.EXAM_TASK_ID
                 WHERE t.IS_DEL = 0");
 
             List<string> conditions = new List<string>();
@@ -167,7 +166,7 @@ namespace DbProcedureCaller.Services
             if (!string.IsNullOrEmpty(category))
                 conditions.Add(BuildInCondition("t.EXAM_CATEGORY_NAME", category));
             if (!string.IsNullOrEmpty(patientType))
-                conditions.Add(BuildInCondition("ti.PATIENT_TYPE", patientType));
+                conditions.Add(BuildInCondition("t.ENCOUNTER_TYPE_NO", patientType));
             if (!string.IsNullOrEmpty(resultStatus))
             {
                 if (resultStatus.Contains(","))
@@ -873,11 +872,11 @@ namespace DbProcedureCaller.Services
 
                 using (SqlConnection conn = DatabaseConnection.GetConnection())
                 {
-                    string sql = @"SELECT DISTINCT PATIENT_TYPE as code, PATIENT_TYPE as name
-                        FROM EXAM_TASK_INFO
-                        WHERE PATIENT_TYPE IS NOT NULL AND PATIENT_TYPE != ''
+                    string sql = @"SELECT DISTINCT ENCOUNTER_TYPE_NO as code, ENCOUNTER_TYPE_NO as name
+                        FROM EXAM_TASK
+                        WHERE ENCOUNTER_TYPE_NO IS NOT NULL AND ENCOUNTER_TYPE_NO != ''
                         AND (@System IS NULL OR @System = '' OR SYSTEM_SOURCE_NO = @System)
-                        ORDER BY PATIENT_TYPE";
+                        ORDER BY ENCOUNTER_TYPE_NO";
 
                     using (SqlCommand cmd = new SqlCommand(sql, conn))
                     {
