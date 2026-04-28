@@ -134,7 +134,7 @@ namespace DbProcedureCaller.Services
                     dbo.fn_GetDepartmentName(t.EXAM_CATEGORY_NAME) AS 执行科室,
                     ISNULL(t.EXAM_CATEGORY_NAME, '') AS 检查类型,
                     ISNULL(ti.PATIENT_TYPE, '') AS 病人类型,
-                    CASE 
+                    CASE
                         WHEN r.REPORT_RESULT LIKE '%阳性%' THEN '阳性'
                         WHEN r.REPORT_RESULT LIKE '%阴性%' THEN '阴性'
                         ELSE '未知'
@@ -144,16 +144,16 @@ namespace DbProcedureCaller.Services
                     ISNULL(SUM(CASE WHEN r.REPORT_RESULT LIKE '%阴性%' THEN 1 ELSE 0 END), 0) AS 阴性数量,
                     ISNULL(AVG(CASE WHEN r.REPORT_RESULT LIKE '%阳性%' THEN 100.0 ELSE 0 END), 0) AS 阳性率
                 FROM EXAM_TASK t
-                LEFT JOIN EXAM_REPORT r ON t.ID = r.TASK_ID
-                LEFT JOIN EXAM_TASK_INFO ti ON t.ID = ti.TASK_ID
+                LEFT JOIN EXAM_REPORT r ON t.EXAM_TASK_ID = r.EXAM_TASK_ID
+                LEFT JOIN EXAM_TASK_INFO ti ON t.EXAM_TASK_ID = ti.EXAM_TASK_ID
                 WHERE t.IS_DEL = 0");
 
             List<string> conditions = new List<string>();
 
             if (!string.IsNullOrEmpty(startDate))
-                conditions.Add("t.EXAM_TASK_CREATE_TIME >= @StartDate");
+                conditions.Add("t.CREATED_AT >= @StartDate");
             if (!string.IsNullOrEmpty(endDate))
-                conditions.Add("t.EXAM_TASK_CREATE_TIME < DATEADD(DAY, 1, @EndDate)");
+                conditions.Add("t.CREATED_AT < DATEADD(DAY, 1, @EndDate)");
             if (!string.IsNullOrEmpty(system))
                 conditions.Add(BuildInCondition("t.SYSTEM_SOURCE_NO", system));
             if (!string.IsNullOrEmpty(reporter))
@@ -194,7 +194,7 @@ namespace DbProcedureCaller.Services
                     dbo.fn_GetDepartmentName(t.EXAM_CATEGORY_NAME),
                     ISNULL(t.EXAM_CATEGORY_NAME, ''),
                     ISNULL(ti.PATIENT_TYPE, ''),
-                    CASE 
+                    CASE
                         WHEN r.REPORT_RESULT LIKE '%阳性%' THEN '阳性'
                         WHEN r.REPORT_RESULT LIKE '%阴性%' THEN '阴性'
                         ELSE '未知'
@@ -374,7 +374,7 @@ namespace DbProcedureCaller.Services
                     string sql = @"
                         SELECT
                             dbo.fn_GetDepartmentName(t.EXAM_CATEGORY_NAME) AS 执行科室,
-                            CASE 
+                            CASE
                                 WHEN r.REPORT_RESULT LIKE '%阳性%' THEN '阳性'
                                 WHEN r.REPORT_RESULT LIKE '%阴性%' THEN '阴性'
                                 ELSE '未知'
@@ -384,14 +384,14 @@ namespace DbProcedureCaller.Services
                             ISNULL(SUM(CASE WHEN r.REPORT_RESULT LIKE '%阴性%' THEN 1 ELSE 0 END), 0) AS 阴性数量,
                             ISNULL(AVG(CASE WHEN r.REPORT_RESULT LIKE '%阳性%' THEN 100.0 ELSE 0 END), 0) AS 阳性率
                         FROM EXAM_TASK t
-                        LEFT JOIN EXAM_REPORT r ON t.ID = r.TASK_ID
+                        LEFT JOIN EXAM_REPORT r ON t.EXAM_TASK_ID = r.EXAM_TASK_ID
                         WHERE t.IS_DEL = 0
-                            AND t.EXAM_TASK_CREATE_TIME >= @StartDate
-                            AND t.EXAM_TASK_CREATE_TIME < DATEADD(DAY, 1, @EndDate)
+                            AND t.CREATED_AT >= @StartDate
+                            AND t.CREATED_AT < DATEADD(DAY, 1, @EndDate)
                             AND (@System IS NULL OR @System = '' OR t.SYSTEM_SOURCE_NO = @System)
                         GROUP BY
                             dbo.fn_GetDepartmentName(t.EXAM_CATEGORY_NAME),
-                            CASE 
+                            CASE
                                 WHEN r.REPORT_RESULT LIKE '%阳性%' THEN '阳性'
                                 WHEN r.REPORT_RESULT LIKE '%阴性%' THEN '阴性'
                                 ELSE '未知'
@@ -441,7 +441,7 @@ namespace DbProcedureCaller.Services
                         SELECT
                             ISNULL(r.REVIEWER_NAME, '') AS 医生姓名,
                             '审核医生' AS 医生类型,
-                            CASE 
+                            CASE
                                 WHEN r.REPORT_RESULT LIKE '%阳性%' THEN '阳性'
                                 WHEN r.REPORT_RESULT LIKE '%阴性%' THEN '阴性'
                                 ELSE '未知'
@@ -451,15 +451,15 @@ namespace DbProcedureCaller.Services
                             ISNULL(SUM(CASE WHEN r.REPORT_RESULT LIKE '%阴性%' THEN 1 ELSE 0 END), 0) AS 阴性数量,
                             ISNULL(AVG(CASE WHEN r.REPORT_RESULT LIKE '%阳性%' THEN 100.0 ELSE 0 END), 0) AS 阳性率
                         FROM EXAM_TASK t
-                        LEFT JOIN EXAM_REPORT r ON t.ID = r.TASK_ID
+                        LEFT JOIN EXAM_REPORT r ON t.EXAM_TASK_ID = r.EXAM_TASK_ID
                         WHERE t.IS_DEL = 0
-                            AND t.EXAM_TASK_CREATE_TIME >= @StartDate
-                            AND t.EXAM_TASK_CREATE_TIME < DATEADD(DAY, 1, @EndDate)
+                            AND t.CREATED_AT >= @StartDate
+                            AND t.CREATED_AT < DATEADD(DAY, 1, @EndDate)
                             AND (@System IS NULL OR @System = '' OR t.SYSTEM_SOURCE_NO = @System)
                             AND r.REVIEWER_NAME IS NOT NULL
                         GROUP BY
                             r.REVIEWER_NAME,
-                            CASE 
+                            CASE
                                 WHEN r.REPORT_RESULT LIKE '%阳性%' THEN '阳性'
                                 WHEN r.REPORT_RESULT LIKE '%阴性%' THEN '阴性'
                                 ELSE '未知'
@@ -468,7 +468,7 @@ namespace DbProcedureCaller.Services
                         SELECT
                             ISNULL(r.REPORTER_NAME, '') AS 医生姓名,
                             '报告医生' AS 医生类型,
-                            CASE 
+                            CASE
                                 WHEN r.REPORT_RESULT LIKE '%阳性%' THEN '阳性'
                                 WHEN r.REPORT_RESULT LIKE '%阴性%' THEN '阴性'
                                 ELSE '未知'
@@ -478,15 +478,15 @@ namespace DbProcedureCaller.Services
                             ISNULL(SUM(CASE WHEN r.REPORT_RESULT LIKE '%阴性%' THEN 1 ELSE 0 END), 0) AS 阴性数量,
                             ISNULL(AVG(CASE WHEN r.REPORT_RESULT LIKE '%阳性%' THEN 100.0 ELSE 0 END), 0) AS 阳性率
                         FROM EXAM_TASK t
-                        LEFT JOIN EXAM_REPORT r ON t.ID = r.TASK_ID
+                        LEFT JOIN EXAM_REPORT r ON t.EXAM_TASK_ID = r.EXAM_TASK_ID
                         WHERE t.IS_DEL = 0
-                            AND t.EXAM_TASK_CREATE_TIME >= @StartDate
-                            AND t.EXAM_TASK_CREATE_TIME < DATEADD(DAY, 1, @EndDate)
+                            AND t.CREATED_AT >= @StartDate
+                            AND t.CREATED_AT < DATEADD(DAY, 1, @EndDate)
                             AND (@System IS NULL OR @System = '' OR t.SYSTEM_SOURCE_NO = @System)
                             AND r.REPORTER_NAME IS NOT NULL
                         GROUP BY
                             r.REPORTER_NAME,
-                            CASE 
+                            CASE
                                 WHEN r.REPORT_RESULT LIKE '%阳性%' THEN '阳性'
                                 WHEN r.REPORT_RESULT LIKE '%阴性%' THEN '阴性'
                                 ELSE '未知'
@@ -536,7 +536,7 @@ namespace DbProcedureCaller.Services
                         SELECT
                             ISNULL(t.EXAM_CATEGORY_NAME, '') AS 检查类型,
                             dbo.fn_GetDepartmentName(t.EXAM_CATEGORY_NAME) AS 所属科室,
-                            CASE 
+                            CASE
                                 WHEN r.REPORT_RESULT LIKE '%阳性%' THEN '阳性'
                                 WHEN r.REPORT_RESULT LIKE '%阴性%' THEN '阴性'
                                 ELSE '未知'
@@ -546,15 +546,15 @@ namespace DbProcedureCaller.Services
                             ISNULL(SUM(CASE WHEN r.REPORT_RESULT LIKE '%阴性%' THEN 1 ELSE 0 END), 0) AS 阴性数量,
                             ISNULL(AVG(CASE WHEN r.REPORT_RESULT LIKE '%阳性%' THEN 100.0 ELSE 0 END), 0) AS 阳性率
                         FROM EXAM_TASK t
-                        LEFT JOIN EXAM_REPORT r ON t.ID = r.TASK_ID
+                        LEFT JOIN EXAM_REPORT r ON t.EXAM_TASK_ID = r.EXAM_TASK_ID
                         WHERE t.IS_DEL = 0
-                            AND t.EXAM_TASK_CREATE_TIME >= @StartDate
-                            AND t.EXAM_TASK_CREATE_TIME < DATEADD(DAY, 1, @EndDate)
+                            AND t.CREATED_AT >= @StartDate
+                            AND t.CREATED_AT < DATEADD(DAY, 1, @EndDate)
                             AND (@System IS NULL OR @System = '' OR t.SYSTEM_SOURCE_NO = @System)
                         GROUP BY
                             t.EXAM_CATEGORY_NAME,
                             dbo.fn_GetDepartmentName(t.EXAM_CATEGORY_NAME),
-                            CASE 
+                            CASE
                                 WHEN r.REPORT_RESULT LIKE '%阳性%' THEN '阳性'
                                 WHEN r.REPORT_RESULT LIKE '%阴性%' THEN '阴性'
                                 ELSE '未知'
@@ -710,11 +710,11 @@ namespace DbProcedureCaller.Services
 
                 using (SqlConnection conn = DatabaseConnection.GetConnection())
                 {
-                    string sql = @"SELECT DOCTOR_CODE AS code, DOCTOR_NAME AS name
-                        FROM DOCTOR_INFO
-                        WHERE IS_REPORTER = 1 AND IS_ACTIVE = 1
-                        AND (@System IS NULL OR @System = '' OR SYSTEM_TYPE = @System)
-                        ORDER BY DOCTOR_NAME";
+                    string sql = @"SELECT DISTINCT WRITER_NAME AS code, WRITER_NAME AS name
+                        FROM EXAM_REPORT
+                        WHERE WRITER_NAME IS NOT NULL AND WRITER_NAME != ''
+                        AND (@System IS NULL OR @System = '' OR SYSTEM_SOURCE_NO = @System)
+                        ORDER BY WRITER_NAME";
 
                     using (SqlCommand cmd = new SqlCommand(sql, conn))
                     {
@@ -761,11 +761,11 @@ namespace DbProcedureCaller.Services
 
                 using (SqlConnection conn = DatabaseConnection.GetConnection())
                 {
-                    string sql = @"SELECT DOCTOR_CODE AS code, DOCTOR_NAME AS name
-                        FROM DOCTOR_INFO
-                        WHERE IS_REVIEWER = 1 AND IS_ACTIVE = 1
-                        AND (@System IS NULL OR @System = '' OR SYSTEM_TYPE = @System)
-                        ORDER BY DOCTOR_NAME";
+                    string sql = @"SELECT DISTINCT REVIEWER_NAME AS code, REVIEWER_NAME AS name
+                        FROM EXAM_REPORT
+                        WHERE REVIEWER_NAME IS NOT NULL AND REVIEWER_NAME != ''
+                        AND (@System IS NULL OR @System = '' OR SYSTEM_SOURCE_NO = @System)
+                        ORDER BY REVIEWER_NAME";
 
                     using (SqlCommand cmd = new SqlCommand(sql, conn))
                     {
@@ -875,7 +875,8 @@ namespace DbProcedureCaller.Services
                 {
                     string sql = @"SELECT DISTINCT PATIENT_TYPE as code, PATIENT_TYPE as name
                         FROM EXAM_TASK_INFO
-                        WHERE (@System IS NULL OR @System = '' OR SYSTEM_SOURCE_NO = @System)
+                        WHERE PATIENT_TYPE IS NOT NULL AND PATIENT_TYPE != ''
+                        AND (@System IS NULL OR @System = '' OR SYSTEM_SOURCE_NO = @System)
                         ORDER BY PATIENT_TYPE";
 
                     using (SqlCommand cmd = new SqlCommand(sql, conn))
@@ -968,17 +969,17 @@ namespace DbProcedureCaller.Services
                         LogHelper.LogInfo("SYS_CONFIG表中未找到医院名称配置");
                     }
 
-                    sql = @"SELECT TOP 1 VALUE FROM SYSTEM_PARAM WHERE PARAM_NAME = '医院名称'";
+                    sql = @"SELECT TOP 1 HOSPITAL_NAME FROM EXAM_TASK WHERE HOSPITAL_NAME IS NOT NULL";
                     using (SqlCommand cmd = new SqlCommand(sql, conn))
                     {
                         object result = cmd.ExecuteScalar();
                         if (result != null && result != DBNull.Value)
                         {
                             string hospitalName = result.ToString();
-                            LogHelper.LogInfo($"从SYSTEM_PARAM获取医院名称: {hospitalName}");
+                            LogHelper.LogInfo($"从EXAM_TASK获取医院名称: {hospitalName}");
                             return hospitalName;
                         }
-                        LogHelper.LogInfo("SYSTEM_PARAM表中未找到医院名称配置");
+                        LogHelper.LogInfo("EXAM_TASK表中未找到医院名称配置");
                     }
                 }
             }
