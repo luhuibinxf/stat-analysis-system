@@ -97,6 +97,14 @@ namespace DbProcedureCaller.API
                 {
                     return HandleUpdateDbConfig(inputStream);
                 }
+                else if (url == "/get-port" && httpMethod == "GET")
+                {
+                    return HandleGetPort();
+                }
+                else if (url == "/set-port" && httpMethod == "POST")
+                {
+                    return HandleSetPort(inputStream);
+                }
                 else
                 {
                     return Encoding.UTF8.GetBytes("{\"success\": false, \"error\": \"未知的API端点\"}");
@@ -464,6 +472,72 @@ namespace DbProcedureCaller.API
                 catch (Exception ex)
                 {
                     LogHelper.LogError($"更新数据库配置失败: {ex.Message}");
+                    return Encoding.UTF8.GetBytes($"{{\"success\": false, \"error\": \"{ex.Message}\"}}");
+                }
+            }
+        }
+
+        private byte[] HandleGetPort()
+        {
+            try
+            {
+                string exeDir = System.Windows.Forms.Application.StartupPath;
+                string configFile = System.IO.Path.Combine(exeDir, "server_config.dat");
+                string configPort = "9094";
+                string runningPort = "9094";
+
+                if (System.IO.File.Exists(configFile))
+                {
+                    string encrypted = System.IO.File.ReadAllText(configFile).Trim();
+                    try
+                    {
+                        byte[] data = Convert.FromBase64String(encrypted);
+                        configPort = Encoding.UTF8.GetString(data);
+                    }
+                    catch { }
+                }
+
+                return Encoding.UTF8.GetBytes($"{{\"success\": true, \"data\": {{\"port\": \"{configPort}\", \"runningPort\": \"{runningPort}\"}}}}");
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogException(ex, "获取端口配置失败");
+                return Encoding.UTF8.GetBytes($"{{\"success\": false, \"error\": \"{ex.Message}\"}}");
+            }
+        }
+
+        private byte[] HandleSetPort(Stream inputStream)
+        {
+            using (StreamReader reader = new StreamReader(inputStream, Encoding.UTF8))
+            {
+                string postData = reader.ReadToEnd();
+                string port = ExtractValue(postData, "port");
+
+                if (string.IsNullOrEmpty(port))
+                {
+                    return Encoding.UTF8.GetBytes("{\"success\": false, \"error\": \"端口号不能为空\"}");
+                }
+
+                int portNum;
+                if (!int.TryParse(port, out portNum) || portNum < 1 || portNum > 65535)
+                {
+                    return Encoding.UTF8.GetBytes("{\"success\": false, \"error\": \"端口号必须在1-65535之间\"}");
+                }
+
+                try
+                {
+                    string exeDir = System.Windows.Forms.Application.StartupPath;
+                    string configFile = System.IO.Path.Combine(exeDir, "server_config.dat");
+                    byte[] data = Encoding.UTF8.GetBytes(port);
+                    string encrypted = Convert.ToBase64String(data);
+                    System.IO.File.WriteAllText(configFile, encrypted);
+                    
+                    LogHelper.LogInfo($"端口配置已保存: {port}");
+                    return Encoding.UTF8.GetBytes("{\"success\": true, \"message\": \"端口配置已保存，重启程序后生效\"}");
+                }
+                catch (Exception ex)
+                {
+                    LogHelper.LogException(ex, "保存端口配置失败");
                     return Encoding.UTF8.GetBytes($"{{\"success\": false, \"error\": \"{ex.Message}\"}}");
                 }
             }
