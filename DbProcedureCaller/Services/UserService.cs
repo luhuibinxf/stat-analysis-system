@@ -10,7 +10,6 @@ namespace DbProcedureCaller.Services
     public class UserService
     {
         private static readonly object _lock = new object();
-        private static System.Collections.Generic.List<System.Collections.Generic.Dictionary<string, object>> _mockUsers = new System.Collections.Generic.List<System.Collections.Generic.Dictionary<string, object>>();
 
         public bool ValidateUser(string username, string password)
         {
@@ -18,7 +17,8 @@ namespace DbProcedureCaller.Services
 
             if (string.IsNullOrEmpty(connectionString))
             {
-                return (username == AppConstants.DefaultAdminUser && password == AppConstants.DefaultAdminPassword);
+                LogHelper.LogError("数据库连接字符串为空，无法验证用户");
+                return false;
             }
 
             try
@@ -169,7 +169,9 @@ namespace DbProcedureCaller.Services
 
             if (string.IsNullOrEmpty(connectionString))
             {
-                return (username == AppConstants.DefaultAdminUser && password == AppConstants.DefaultAdminPassword);
+                LogHelper.LogError("数据库连接字符串为空，无法验证用户");
+                MessageBox.Show("数据库连接未配置，请先配置数据库连接。", "连接错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
             }
 
             try
@@ -211,7 +213,8 @@ namespace DbProcedureCaller.Services
 
             if (string.IsNullOrEmpty(connectionString))
             {
-                return username == AppConstants.DefaultAdminUser;
+                LogHelper.LogError("数据库连接字符串为空，无法检查管理员权限");
+                return false;
             }
 
             try
@@ -237,7 +240,7 @@ namespace DbProcedureCaller.Services
                 LogHelper.LogException(ex, "检查管理员权限失败");
             }
 
-            return username == AppConstants.DefaultAdminUser;
+            return false;
         }
 
         public string GetUsersJson()
@@ -246,7 +249,8 @@ namespace DbProcedureCaller.Services
 
             if (string.IsNullOrEmpty(connectionString))
             {
-                return "{\"success\": true, \"data\": [{\"id\": 1, \"username\": \"lhbdb\", \"role\": \"管理员\", \"status\": \"启用\"}]}";
+                LogHelper.LogError("数据库连接字符串为空，无法获取用户列表");
+                return "{\"success\": false, \"error\": \"数据库连接未配置\", \"data\": []}";
             }
 
             try

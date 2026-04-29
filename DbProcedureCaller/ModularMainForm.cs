@@ -354,7 +354,7 @@ namespace DbProcedureCaller
                         continue;
                     }
 
-                    string url = request.Url.LocalPath;
+                    string url = request.RawUrl;
                     string httpMethod = request.HttpMethod;
                     byte[] responseBytes = GetHtmlContent(url, request);
 
@@ -393,9 +393,13 @@ namespace DbProcedureCaller
                    url == "/get-users" ||
                    url == "/get-port" ||
                    url == "/set-port" ||
+                   url == "/init-db" ||
+                   url.StartsWith("/get-all-options") ||
                    url == "/get-system-types" ||
                    url == "/get-stat-menu" ||
                    url == "/get-stat-page-config" ||
+                   url == "/get-query-config" ||
+                   url.StartsWith("/execute-dynamic-query") ||
                    url.StartsWith("/get-reporters") ||
                    url.StartsWith("/get-reviewers") ||
                    url.StartsWith("/get-categories") ||
@@ -420,7 +424,7 @@ namespace DbProcedureCaller
                 return apiHandler.HandleRequest(url, request.HttpMethod, request.InputStream);
             }
 
-            if (url == "/" || url == "/index.html")
+            if (url == "/" || url == "/index.html" || url == "/login" || url == "/login.html")
             {
                 string templatePath = Path.Combine(Application.StartupPath, "templates", "index.html");
                 if (File.Exists(templatePath))

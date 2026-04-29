@@ -25,43 +25,43 @@ namespace DbProcedureCaller.API
 
             try
             {
-                if (url.StartsWith("/login") &amp;&amp; httpMethod == "POST")
+                if (url.StartsWith("/login") && httpMethod == "POST")
                 {
                     return HandleLogin(inputStream);
                 }
-                else if (url == "/get-users" &amp;&amp; httpMethod == "GET")
+                else if (url == "/get-users" && httpMethod == "GET")
                 {
                     return HandleGetUsers();
                 }
-                else if (url == "/add-user" &amp;&amp; httpMethod == "POST")
+                else if (url == "/add-user" && httpMethod == "POST")
                 {
                     return HandleAddUser(inputStream);
                 }
-                else if (url == "/update-user" &amp;&amp; httpMethod == "POST")
+                else if (url == "/update-user" && httpMethod == "POST")
                 {
                     return HandleUpdateUser(inputStream);
                 }
-                else if (url == "/delete-user" &amp;&amp; httpMethod == "POST")
+                else if (url == "/delete-user" && httpMethod == "POST")
                 {
                     return HandleDeleteUser(inputStream);
                 }
-                else if (url == "/daily-analysis" &amp;&amp; httpMethod == "POST")
+                else if (url == "/daily-analysis" && httpMethod == "POST")
                 {
                     return HandleDailyAnalysis(inputStream);
                 }
-                else if (url == "/department-statistics" &amp;&amp; httpMethod == "POST")
+                else if (url == "/department-statistics" && httpMethod == "POST")
                 {
                     return HandleDepartmentStatistics(inputStream);
                 }
-                else if (url == "/doctor-statistics" &amp;&amp; httpMethod == "POST")
+                else if (url == "/doctor-statistics" && httpMethod == "POST")
                 {
                     return HandleDoctorStatistics(inputStream);
                 }
-                else if (url == "/category-statistics" &amp;&amp; httpMethod == "POST")
+                else if (url == "/category-statistics" && httpMethod == "POST")
                 {
                     return HandleCategoryStatistics(inputStream);
                 }
-                else if (url == "/get-query-config" &amp;&amp; httpMethod == "GET")
+                else if (url == "/get-query-config" && httpMethod == "GET")
                 {
                     return HandleGetQueryConfig();
                 }
@@ -69,21 +69,57 @@ namespace DbProcedureCaller.API
                 {
                     return HandleExecuteDynamicQuery(url);
                 }
-                else if (url == "/get-hospital-info" &amp;&amp; httpMethod == "GET")
+                else if (url == "/get-hospital-info" && httpMethod == "GET")
                 {
                     return HandleGetHospitalInfo();
                 }
-                else if (url == "/update-db-config" &amp;&amp; httpMethod == "POST")
+                else if (url == "/update-db-config" && httpMethod == "POST")
                 {
                     return HandleUpdateDbConfig(inputStream);
                 }
-                else if (url == "/get-port" &amp;&amp; httpMethod == "GET")
+                else if (url == "/get-port" && httpMethod == "GET")
                 {
                     return HandleGetPort();
                 }
-                else if (url == "/set-port" &amp;&amp; httpMethod == "POST")
+                else if (url == "/set-port" && httpMethod == "POST")
                 {
                     return HandleSetPort(inputStream);
+                }
+                else if (url == "/init-db" && httpMethod == "POST")
+                {
+                    return HandleInitDb();
+                }
+                else if (url.StartsWith("/get-all-options") && httpMethod == "GET")
+                {
+                    return HandleGetAllOptions(url);
+                }
+                else if (url == "/get-system-types" && httpMethod == "GET")
+                {
+                    return HandleGetSystemTypes();
+                }
+                else if (url.StartsWith("/get-reporters") && httpMethod == "GET")
+                {
+                    return HandleGetReporters(url);
+                }
+                else if (url.StartsWith("/get-reviewers") && httpMethod == "GET")
+                {
+                    return HandleGetReviewers(url);
+                }
+                else if (url.StartsWith("/get-categories") && httpMethod == "GET")
+                {
+                    return HandleGetCategories(url);
+                }
+                else if (url.StartsWith("/get-departments") && httpMethod == "GET")
+                {
+                    return HandleGetDepartments(url);
+                }
+                else if (url.StartsWith("/get-patient-types") && httpMethod == "GET")
+                {
+                    return HandleGetPatientTypes(url);
+                }
+                else if (url.StartsWith("/get-result-status") && httpMethod == "GET")
+                {
+                    return HandleGetResultStatus();
                 }
                 else
                 {
@@ -93,7 +129,7 @@ namespace DbProcedureCaller.API
             catch (Exception ex)
             {
                 LogHelper.LogException(ex, "处理API请求失败");
-                return Encoding.UTF8.GetBytes($"{{\"success\": false, \"error\": \"{ex.Message}\"}}");
+                return CreateErrorResponse(ex.Message);
             }
         }
 
@@ -292,7 +328,7 @@ namespace DbProcedureCaller.API
             if (url.Contains("?"))
             {
                 string queryString = url.Substring(url.IndexOf("?") + 1);
-                string[] parameters = queryString.Split('&amp;');
+                string[] parameters = queryString.Split('&');
                 foreach (string param in parameters)
                 {
                     string[] keyValue = param.Split('=');
@@ -357,7 +393,7 @@ namespace DbProcedureCaller.API
                 if (formStart >= 0)
                 {
                     formStart += formPattern.Length;
-                    int formEnd = data.IndexOf('&amp;', formStart);
+                    int formEnd = data.IndexOf('&', formStart);
                     if (formEnd > formStart)
                     {
                         return System.Net.WebUtility.UrlDecode(data.Substring(formStart, formEnd - formStart));
@@ -374,7 +410,8 @@ namespace DbProcedureCaller.API
         private byte[] HandleGetHospitalInfo()
         {
             string hospitalName = _dailyAnalysisService.GetHospitalName();
-            return Encoding.UTF8.GetBytes($"{{\"success\": true, \"hospitalName\": \"{hospitalName}\"}}");
+            string encodedName = HttpUtility.HtmlEncode(hospitalName);
+            return Encoding.UTF8.GetBytes($"{{\"success\": true, \"hospitalName\": \"{encodedName}\"}}");
         }
 
         private byte[] HandleUpdateDbConfig(Stream inputStream)
@@ -403,7 +440,7 @@ namespace DbProcedureCaller.API
                 catch (Exception ex)
                 {
                     LogHelper.LogError($"更新数据库配置失败: {ex.Message}");
-                    return Encoding.UTF8.GetBytes($"{{\"success\": false, \"error\": \"{ex.Message}\"}}");
+                    return CreateErrorResponse(ex.Message);
                 }
             }
         }
@@ -433,7 +470,7 @@ namespace DbProcedureCaller.API
             catch (Exception ex)
             {
                 LogHelper.LogException(ex, "获取端口配置失败");
-                return Encoding.UTF8.GetBytes($"{{\"success\": false, \"error\": \"{ex.Message}\"}}");
+                return CreateErrorResponse(ex.Message);
             }
         }
 
@@ -469,25 +506,207 @@ namespace DbProcedureCaller.API
                 catch (Exception ex)
                 {
                     LogHelper.LogException(ex, "保存端口配置失败");
-                    return Encoding.UTF8.GetBytes($"{{\"success\": false, \"error\": \"{ex.Message}\"}}");
+                    return CreateErrorResponse(ex.Message);
                 }
             }
         }
 
+        private byte[] HandleInitDb()
+        {
+            LogHelper.LogInfo("开始初始化数据库配置表");
+            try
+            {
+                string result = _dailyAnalysisService.InitializeConfigTables();
+                return Encoding.UTF8.GetBytes(result);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogException(ex, "初始化数据库配置表失败");
+                return CreateErrorResponse(ex.Message);
+            }
+        }
+
+        private byte[] HandleGetAllOptions(string url)
+        {
+            LogHelper.LogInfo("获取所有下拉框选项（聚合API）");
+            try
+            {
+                string system = ExtractUrlParam(url, "system");
+                string result = _dailyAnalysisService.GetAllOptions(system);
+                return Encoding.UTF8.GetBytes(result);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogException(ex, "获取所有下拉框选项失败");
+                return CreateErrorResponse(ex.Message);
+            }
+        }
+
+        private byte[] HandleGetSystemTypes()
+        {
+            LogHelper.LogInfo("获取系统类型列表");
+            try
+            {
+                string result = _dailyAnalysisService.GetSystemTypes();
+                return Encoding.UTF8.GetBytes(result);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogException(ex, "获取系统类型失败");
+                return CreateErrorResponse(ex.Message);
+            }
+        }
+
+        private byte[] HandleGetReporters(string url)
+        {
+            LogHelper.LogInfo("获取报告医生列表");
+            try
+            {
+                string system = ExtractUrlParam(url, "system");
+                string result = _dailyAnalysisService.GetReporters(system);
+                return Encoding.UTF8.GetBytes(result);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogException(ex, "获取报告医生失败");
+                return CreateErrorResponse(ex.Message);
+            }
+        }
+
+        private byte[] HandleGetReviewers(string url)
+        {
+            LogHelper.LogInfo("获取审核医生列表");
+            try
+            {
+                string system = ExtractUrlParam(url, "system");
+                string result = _dailyAnalysisService.GetReviewers(system);
+                return Encoding.UTF8.GetBytes(result);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogException(ex, "获取审核医生失败");
+                return CreateErrorResponse(ex.Message);
+            }
+        }
+
+        private byte[] HandleGetCategories(string url)
+        {
+            LogHelper.LogInfo("获取检查类型列表");
+            try
+            {
+                string system = ExtractUrlParam(url, "system");
+                string result = _dailyAnalysisService.GetCategories(system);
+                return Encoding.UTF8.GetBytes(result);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogException(ex, "获取检查类型失败");
+                return CreateErrorResponse(ex.Message);
+            }
+        }
+
+        private byte[] HandleGetDepartments(string url)
+        {
+            LogHelper.LogInfo("获取执行科室列表");
+            try
+            {
+                string system = ExtractUrlParam(url, "system");
+                string result = _dailyAnalysisService.GetDepartments(system);
+                return Encoding.UTF8.GetBytes(result);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogException(ex, "获取执行科室失败");
+                return CreateErrorResponse(ex.Message);
+            }
+        }
+
+        private byte[] HandleGetPatientTypes(string url)
+        {
+            LogHelper.LogInfo("获取病人类型列表");
+            try
+            {
+                string system = ExtractUrlParam(url, "system");
+                string result = _dailyAnalysisService.GetPatientTypes(system);
+                return Encoding.UTF8.GetBytes(result);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogException(ex, "获取病人类型失败");
+                return CreateErrorResponse(ex.Message);
+            }
+        }
+
+        private byte[] HandleGetResultStatus()
+        {
+            LogHelper.LogInfo("获取结果状态列表");
+            try
+            {
+                string result = _dailyAnalysisService.GetResultStatus();
+                return Encoding.UTF8.GetBytes(result);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogException(ex, "获取结果状态失败");
+                return CreateErrorResponse(ex.Message);
+            }
+        }
+
+        private string ExtractUrlParam(string url, string paramName)
+        {
+            if (url.Contains("?" + paramName + "="))
+            {
+                string param = url.Substring(url.IndexOf("?" + paramName + "=") + paramName.Length + 2);
+                if (param.Contains("&"))
+                {
+                    param = param.Substring(0, param.IndexOf("&"));
+                }
+                return param;
+            }
+            return "";
+        }
+
+        /// <summary>
+        /// 将DataTable转换为JSON字符串（带XSS防护）
+        /// 2026-04-29 修改：添加HTML编码防止XSS攻击
+        /// </summary>
+        /// <param name="dt">DataTable数据</param>
+        /// <returns>JSON字符串</returns>
         private string ConvertDataTableToJson(DataTable dt)
         {
-            var rows = new System.Collections.Generic.List&lt;System.Collections.Generic.Dictionary&lt;string, object&gt;&gt;();
+            var rows = new System.Collections.Generic.List<System.Collections.Generic.Dictionary<string, object>>();
             foreach (DataRow dr in dt.Rows)
             {
-                var row = new System.Collections.Generic.Dictionary&lt;string, object&gt;();
+                var row = new System.Collections.Generic.Dictionary<string, object>();
                 foreach (DataColumn col in dt.Columns)
                 {
-                    row.Add(col.ColumnName, dr[col] != DBNull.Value ? dr[col] : null);
+                    object value = dr[col] != DBNull.Value ? dr[col] : null;
+                    if (value is string)
+                    {
+                        // XSS防护：对字符串值进行HTML编码
+                        row.Add(col.ColumnName, HttpUtility.HtmlEncode(value.ToString()));
+                    }
+                    else
+                    {
+                        row.Add(col.ColumnName, value);
+                    }
                 }
                 rows.Add(row);
             }
             return string.Format("{{\"success\": true, \"data\": {0}}}",
                 Newtonsoft.Json.JsonConvert.SerializeObject(rows));
+        }
+
+        /// <summary>
+        /// 创建统一的错误响应（带XSS防护）
+        /// 2026-04-29 新增：统一错误处理机制，确保错误消息经过HTML编码
+        /// </summary>
+        /// <param name="errorMessage">错误消息</param>
+        /// <returns>错误响应字节数组</returns>
+        private byte[] CreateErrorResponse(string errorMessage)
+        {
+            string encodedMessage = HttpUtility.HtmlEncode(errorMessage);
+            return Encoding.UTF8.GetBytes($"{{\"success\": false, \"error\": \"{encodedMessage}\"}}");
         }
     }
 }

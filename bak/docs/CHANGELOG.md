@@ -23,14 +23,21 @@
 - 🛡️ 使用存储过程白名单验证
 - 🛡️ 禁止直接执行动态SQL
 - 🛡️ 添加HTML编码防止XSS攻击
+- 🛡️ 参数化查询：修复SQL注入漏洞
 
 **文件变更:**
 | 文件 | 变更类型 | 说明 |
 |------|----------|------|
 | `scripts/create_param_config_tables.sql` | 修改 | 添加白名单表和安全存储过程 |
-| `DbProcedureCaller/Services/DailyAnalysisService.cs` | 修改 | 使用安全存储过程执行查询 |
+| `DbProcedureCaller/Services/DailyAnalysisService.cs` | 修改 | 修复SQL注入漏洞，使用参数化查询 |
+| `DbProcedureCaller/API/ApiHandler.cs` | 修改 | 添加XSS防护，统一错误处理 |
 | `templates/index.html` | 修改 | 引入ECharts图表库 |
 | `templates/js/dailyAnalysis.js` | 修改 | 添加错误处理和图表渲染 |
+
+**安全修复详情:**
+1. **SQL注入修复**：将`BuildInCondition`方法从字符串拼接改为参数化查询，防止恶意SQL注入攻击
+2. **XSS防护**：在`ConvertDataTableToJson`方法中对所有字符串输出进行HTML编码
+3. **统一错误响应**：使用`CreateErrorResponse`方法确保错误消息也经过HTML编码处理
 
 ---
 

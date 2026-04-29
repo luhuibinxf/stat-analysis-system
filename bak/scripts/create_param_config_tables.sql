@@ -1,25 +1,23 @@
 -- =====================================================
 -- 动态查询配置表 - 驱动界面查询条件自动生成
--- 表名：tjfx_QUERY_CONFIG
 -- =====================================================
 
 CREATE TABLE tjfx_QUERY_CONFIG (
     ID INT IDENTITY(1,1) PRIMARY KEY,
-    FIELD_NAME NVARCHAR(50) NOT NULL,              -- 字段名（对应API参数和HTML元素ID）
-    DISPLAY_NAME NVARCHAR(100) NOT NULL,           -- 界面显示名称
-    QUERY_SQL NVARCHAR(MAX),                        -- SQL查询语句（获取下拉选项，使用@PARENT_VALUE作为父级参数）
-    IS_VISIBLE BIT DEFAULT 1,                       -- 是否在界面显示
-    IS_MULTIPLE BIT DEFAULT 0,                      -- 是否多选
-    SORT_ORDER INT DEFAULT 0,                       -- 界面显示顺序
-    PARENT_FIELD NVARCHAR(50),                      -- 父级字段名（用于联动，如system是reporter的父级）
-    DEFAULT_VALUE NVARCHAR(200),                    -- 默认值
-    PLACEHOLDER NVARCHAR(100),                      -- 占位提示文字
-    IS_ACTIVE BIT DEFAULT 1,                        -- 是否启用
+    FIELD_NAME NVARCHAR(50) NOT NULL,
+    DISPLAY_NAME NVARCHAR(100) NOT NULL,
+    QUERY_SQL NVARCHAR(MAX),
+    IS_VISIBLE BIT DEFAULT 1,
+    IS_MULTIPLE BIT DEFAULT 0,
+    SORT_ORDER INT DEFAULT 0,
+    PARENT_FIELD NVARCHAR(50),
+    DEFAULT_VALUE NVARCHAR(200),
+    PLACEHOLDER NVARCHAR(100),
+    IS_ACTIVE BIT DEFAULT 1,
     CREATE_TIME DATETIME DEFAULT GETDATE(),
     UPDATE_TIME DATETIME DEFAULT GETDATE()
 );
 
--- 创建唯一索引
 CREATE UNIQUE INDEX UX_QUERY_FIELD_NAME ON tjfx_QUERY_CONFIG (FIELD_NAME);
 
 -- =====================================================
@@ -28,54 +26,44 @@ CREATE UNIQUE INDEX UX_QUERY_FIELD_NAME ON tjfx_QUERY_CONFIG (FIELD_NAME);
 
 CREATE TABLE tjfx_QUERY_WHITELIST (
     ID INT IDENTITY(1,1) PRIMARY KEY,
-    FIELD_NAME NVARCHAR(50) NOT NULL,              -- 字段名
-    ALLOWED_SQL NVARCHAR(MAX) NOT NULL,            -- 允许执行的SQL
-    DESCRIPTION NVARCHAR(200),                     -- 描述
+    FIELD_NAME NVARCHAR(50) NOT NULL,
+    ALLOWED_SQL NVARCHAR(MAX) NOT NULL,
+    DESCRIPTION NVARCHAR(200),
     IS_ACTIVE BIT DEFAULT 1,
     CREATE_TIME DATETIME DEFAULT GETDATE()
 );
 
 -- =====================================================
--- 初始化配置数据 - 从WiNEX_PACS_Schema_Full业务表获取
+-- 初始化配置数据
 -- =====================================================
 
--- 系统
 INSERT INTO tjfx_QUERY_CONFIG (FIELD_NAME, DISPLAY_NAME, QUERY_SQL, IS_VISIBLE, IS_MULTIPLE, SORT_ORDER, PARENT_FIELD, PLACEHOLDER)
 VALUES ('system', '系统', 'SELECT DISTINCT SYSTEM_SOURCE_NO as code, SYSTEM_SOURCE_NO as name FROM EXAM_TASK WHERE SYSTEM_SOURCE_NO IS NOT NULL ORDER BY SYSTEM_SOURCE_NO', 1, 0, 1, NULL, '请选择系统');
 
--- 报告医生（联动系统）
 INSERT INTO tjfx_QUERY_CONFIG (FIELD_NAME, DISPLAY_NAME, QUERY_SQL, IS_VISIBLE, IS_MULTIPLE, SORT_ORDER, PARENT_FIELD, PLACEHOLDER)
 VALUES ('reporter', '报告医生', 'SELECT DISTINCT r.REPORTER_NAME as code, r.REPORTER_NAME as name FROM EXAM_REPORT r INNER JOIN EXAM_TASK t ON r.EXAM_TASK_ID = t.EXAM_TASK_ID WHERE r.REPORTER_NAME IS NOT NULL AND (@PARENT_VALUE = '''' OR t.SYSTEM_SOURCE_NO = @PARENT_VALUE) ORDER BY r.REPORTER_NAME', 1, 1, 2, 'system', '请选择报告医生');
 
--- 审核医生（联动系统）
 INSERT INTO tjfx_QUERY_CONFIG (FIELD_NAME, DISPLAY_NAME, QUERY_SQL, IS_VISIBLE, IS_MULTIPLE, SORT_ORDER, PARENT_FIELD, PLACEHOLDER)
 VALUES ('reviewer', '审核医生', 'SELECT DISTINCT r.REVIEWER_NAME as code, r.REVIEWER_NAME as name FROM EXAM_REPORT r INNER JOIN EXAM_TASK t ON r.EXAM_TASK_ID = t.EXAM_TASK_ID WHERE r.REVIEWER_NAME IS NOT NULL AND (@PARENT_VALUE = '''' OR t.SYSTEM_SOURCE_NO = @PARENT_VALUE) ORDER BY r.REVIEWER_NAME', 1, 1, 3, 'system', '请选择审核医生');
 
--- 技师（联动系统）
 INSERT INTO tjfx_QUERY_CONFIG (FIELD_NAME, DISPLAY_NAME, QUERY_SQL, IS_VISIBLE, IS_MULTIPLE, SORT_ORDER, PARENT_FIELD, PLACEHOLDER)
 VALUES ('technician', '技师', 'SELECT DISTINCT t.TECHNICIAN_NAME as code, t.TECHNICIAN_NAME as name FROM EXAM_TASK t WHERE t.TECHNICIAN_NAME IS NOT NULL AND (@PARENT_VALUE = '''' OR t.SYSTEM_SOURCE_NO = @PARENT_VALUE) ORDER BY t.TECHNICIAN_NAME', 1, 1, 4, 'system', '请选择技师');
 
--- 执行科室（联动系统）
 INSERT INTO tjfx_QUERY_CONFIG (FIELD_NAME, DISPLAY_NAME, QUERY_SQL, IS_VISIBLE, IS_MULTIPLE, SORT_ORDER, PARENT_FIELD, PLACEHOLDER)
 VALUES ('department', '执行科室', 'SELECT DISTINCT t.EXEC_DEPT_NAME as code, t.EXEC_DEPT_NAME as name FROM EXAM_TASK t WHERE t.EXEC_DEPT_NAME IS NOT NULL AND (@PARENT_VALUE = '''' OR t.SYSTEM_SOURCE_NO = @PARENT_VALUE) ORDER BY t.EXEC_DEPT_NAME', 1, 1, 5, 'system', '请选择执行科室');
 
--- 检查类型（联动系统）
 INSERT INTO tjfx_QUERY_CONFIG (FIELD_NAME, DISPLAY_NAME, QUERY_SQL, IS_VISIBLE, IS_MULTIPLE, SORT_ORDER, PARENT_FIELD, PLACEHOLDER)
 VALUES ('category', '检查类型', 'SELECT DISTINCT t.EXAM_CATEGORY_NAME as code, t.EXAM_CATEGORY_NAME as name FROM EXAM_TASK t WHERE t.EXAM_CATEGORY_NAME IS NOT NULL AND (@PARENT_VALUE = '''' OR t.SYSTEM_SOURCE_NO = @PARENT_VALUE) ORDER BY t.EXAM_CATEGORY_NAME', 1, 1, 6, 'system', '请选择检查类型');
 
--- 病人类型（联动系统）
 INSERT INTO tjfx_QUERY_CONFIG (FIELD_NAME, DISPLAY_NAME, QUERY_SQL, IS_VISIBLE, IS_MULTIPLE, SORT_ORDER, PARENT_FIELD, PLACEHOLDER)
 VALUES ('patientType', '病人类型', 'SELECT DISTINCT t.ENCOUNTER_TYPE_NAME as code, t.ENCOUNTER_TYPE_NAME as name FROM EXAM_TASK t WHERE t.ENCOUNTER_TYPE_NAME IS NOT NULL AND (@PARENT_VALUE = '''' OR t.SYSTEM_SOURCE_NO = @PARENT_VALUE) ORDER BY t.ENCOUNTER_TYPE_NAME', 1, 1, 7, 'system', '请选择病人类型');
 
--- 结果状态（阴阳性）
 INSERT INTO tjfx_QUERY_CONFIG (FIELD_NAME, DISPLAY_NAME, QUERY_SQL, IS_VISIBLE, IS_MULTIPLE, SORT_ORDER, PARENT_FIELD, PLACEHOLDER)
 VALUES ('resultStatus', '结果状态', 'SELECT DISTINCT REPORT_RESULT_STATUS as code, REPORT_RESULT_STATUS as name FROM EXAM_REPORT WHERE REPORT_RESULT_STATUS IS NOT NULL ORDER BY REPORT_RESULT_STATUS', 1, 1, 8, NULL, '请选择结果状态');
 
--- =====================================================
--- 初始化白名单数据
--- =====================================================
+GO
 
-INSERT INTO tjfx_QUERY_WHITELIST (FIELD_NAME, ALLOWED_SQL, DESCRIPTION) VALUES
+INSERT INTO tjfx_QUERY_WHITELIST (FIELD_NAME, ALLOWED_SQL, DESCRIPTION) VALUES  
 ('system', 'SELECT DISTINCT SYSTEM_SOURCE_NO as code, SYSTEM_SOURCE_NO as name FROM EXAM_TASK WHERE SYSTEM_SOURCE_NO IS NOT NULL ORDER BY SYSTEM_SOURCE_NO', '获取系统列表'),
 ('reporter', 'SELECT DISTINCT r.REPORTER_NAME as code, r.REPORTER_NAME as name FROM EXAM_REPORT r INNER JOIN EXAM_TASK t ON r.EXAM_TASK_ID = t.EXAM_TASK_ID WHERE r.REPORTER_NAME IS NOT NULL AND (@PARENT_VALUE = '''' OR t.SYSTEM_SOURCE_NO = @PARENT_VALUE) ORDER BY r.REPORTER_NAME', '获取报告医生列表'),
 ('reviewer', 'SELECT DISTINCT r.REVIEWER_NAME as code, r.REVIEWER_NAME as name FROM EXAM_REPORT r INNER JOIN EXAM_TASK t ON r.EXAM_TASK_ID = t.EXAM_TASK_ID WHERE r.REVIEWER_NAME IS NOT NULL AND (@PARENT_VALUE = '''' OR t.SYSTEM_SOURCE_NO = @PARENT_VALUE) ORDER BY r.REVIEWER_NAME', '获取审核医生列表'),
@@ -85,32 +73,18 @@ INSERT INTO tjfx_QUERY_WHITELIST (FIELD_NAME, ALLOWED_SQL, DESCRIPTION) VALUES
 ('patientType', 'SELECT DISTINCT t.ENCOUNTER_TYPE_NAME as code, t.ENCOUNTER_TYPE_NAME as name FROM EXAM_TASK t WHERE t.ENCOUNTER_TYPE_NAME IS NOT NULL AND (@PARENT_VALUE = '''' OR t.SYSTEM_SOURCE_NO = @PARENT_VALUE) ORDER BY t.ENCOUNTER_TYPE_NAME', '获取病人类型列表'),
 ('resultStatus', 'SELECT DISTINCT REPORT_RESULT_STATUS as code, REPORT_RESULT_STATUS as name FROM EXAM_REPORT WHERE REPORT_RESULT_STATUS IS NOT NULL ORDER BY REPORT_RESULT_STATUS', '获取结果状态列表');
 
--- =====================================================
--- 存储过程：获取所有查询配置
--- =====================================================
+GO
 
 CREATE PROCEDURE usp_GetQueryConfig
 AS
 BEGIN
-    SELECT 
-        ID,
-        FIELD_NAME,
-        DISPLAY_NAME,
-        IS_VISIBLE,
-        IS_MULTIPLE,
-        SORT_ORDER,
-        PARENT_FIELD,
-        DEFAULT_VALUE,
-        PLACEHOLDER,
-        IS_ACTIVE
+    SELECT ID, FIELD_NAME, DISPLAY_NAME, IS_VISIBLE, IS_MULTIPLE, SORT_ORDER, PARENT_FIELD, DEFAULT_VALUE, PLACEHOLDER, IS_ACTIVE
     FROM tjfx_QUERY_CONFIG
     WHERE IS_ACTIVE = 1
     ORDER BY SORT_ORDER;
 END;
 
--- =====================================================
--- 存储过程：安全执行动态查询（使用白名单验证）
--- =====================================================
+GO
 
 CREATE PROCEDURE usp_SafeExecuteDynamicQuery
     @FieldName NVARCHAR(50),
@@ -118,22 +92,22 @@ CREATE PROCEDURE usp_SafeExecuteDynamicQuery
 AS
 BEGIN
     SET NOCOUNT ON;
-    
+
     DECLARE @AllowedSQL NVARCHAR(MAX);
-    
+
     SELECT @AllowedSQL = ALLOWED_SQL
     FROM tjfx_QUERY_WHITELIST
     WHERE FIELD_NAME = @FieldName AND IS_ACTIVE = 1;
-    
+
     IF @AllowedSQL IS NULL
     BEGIN
-        RAISERROR('字段 %s 未在白名单中，无法执行查询', 16, 1, @FieldName);
+        RAISERROR('字段 %s 不在白名单中，无法执行查询', 16, 1, @FieldName);
         RETURN;
     END
-    
+
     DECLARE @ParamDef NVARCHAR(500);
     SET @ParamDef = '@PARENT_VALUE NVARCHAR(200)';
-    
+
     BEGIN TRY
         EXEC sp_executesql @AllowedSQL, @ParamDef, @PARENT_VALUE = @ParentValue;
     END TRY
@@ -141,19 +115,17 @@ BEGIN
         DECLARE @ErrorMessage NVARCHAR(4000);
         DECLARE @ErrorSeverity INT;
         DECLARE @ErrorState INT;
-        
-        SELECT 
+
+        SELECT
             @ErrorMessage = ERROR_MESSAGE(),
             @ErrorSeverity = ERROR_SEVERITY(),
             @ErrorState = ERROR_STATE();
-        
+
         RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState);
     END CATCH
 END;
 
--- =====================================================
--- 存储过程：添加查询配置（同步白名单）
--- =====================================================
+GO
 
 CREATE PROCEDURE usp_AddQueryConfig
     @FieldName NVARCHAR(50),
@@ -169,14 +141,14 @@ CREATE PROCEDURE usp_AddQueryConfig
 AS
 BEGIN
     BEGIN TRANSACTION;
-    
+
     BEGIN TRY
-        INSERT INTO tjfx_QUERY_CONFIG (FIELD_NAME, DISPLAY_NAME, QUERY_SQL, IS_VISIBLE, IS_MULTIPLE, SORT_ORDER, PARENT_FIELD, DEFAULT_VALUE, PLACEHOLDER)
+        INSERT INTO tjfx_QUERY_CONFIG (FIELD_NAME, DISPLAY_NAME, QUERY_SQL, IS_VISIBLE, IS_MULTIPLE, SORT_ORDER, PARENT_FIELD, DEFAULT_VALUE, PLACEHOLDER)      
         VALUES (@FieldName, @DisplayName, @QuerySql, @IsVisible, @IsMultiple, @SortOrder, @ParentField, @DefaultValue, @Placeholder);
-        
-        INSERT INTO tjfx_QUERY_WHITELIST (FIELD_NAME, ALLOWED_SQL, DESCRIPTION)
+
+        INSERT INTO tjfx_QUERY_WHITELIST (FIELD_NAME, ALLOWED_SQL, DESCRIPTION) 
         VALUES (@FieldName, @QuerySql, @Description);
-        
+
         COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
@@ -187,9 +159,7 @@ BEGIN
     END CATCH
 END;
 
--- =====================================================
--- 存储过程：更新查询配置（同步白名单）
--- =====================================================
+GO
 
 CREATE PROCEDURE usp_UpdateQueryConfig
     @ID INT,
@@ -206,10 +176,10 @@ CREATE PROCEDURE usp_UpdateQueryConfig
 AS
 BEGIN
     BEGIN TRANSACTION;
-    
+
     BEGIN TRY
         UPDATE tjfx_QUERY_CONFIG
-        SET 
+        SET
             DISPLAY_NAME = ISNULL(@DisplayName, DISPLAY_NAME),
             QUERY_SQL = ISNULL(@QuerySql, QUERY_SQL),
             IS_VISIBLE = ISNULL(@IsVisible, IS_VISIBLE),
@@ -221,16 +191,16 @@ BEGIN
             IS_ACTIVE = ISNULL(@IsActive, IS_ACTIVE),
             UPDATE_TIME = GETDATE()
         WHERE ID = @ID;
-        
+
         IF @QuerySql IS NOT NULL OR @Description IS NOT NULL
         BEGIN
             UPDATE tjfx_QUERY_WHITELIST
-            SET 
+            SET
                 ALLOWED_SQL = ISNULL(@QuerySql, ALLOWED_SQL),
                 DESCRIPTION = ISNULL(@Description, DESCRIPTION)
             WHERE FIELD_NAME = (SELECT FIELD_NAME FROM tjfx_QUERY_CONFIG WHERE ID = @ID);
         END
-        
+
         COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
@@ -241,29 +211,26 @@ BEGIN
     END CATCH
 END;
 
--- =====================================================
--- 存储过程：删除查询配置（软删除，同步白名单）
--- =====================================================
+GO
 
 CREATE PROCEDURE usp_DeleteQueryConfig
     @ID INT
 AS
 BEGIN
     BEGIN TRANSACTION;
-    
+
     BEGIN TRY
         DECLARE @FieldName NVARCHAR(50);
-        SELECT @FieldName = FIELD_NAME FROM tjfx_QUERY_CONFIG WHERE ID = @ID;
-        
+        SELECT @FieldName = FIELD_NAME FROM tjfx_QUERY_CONFIG WHERE ID = @ID;   
+
         UPDATE tjfx_QUERY_CONFIG
-        SET IS_ACTIVE = 0,
-            UPDATE_TIME = GETDATE()
+        SET IS_ACTIVE = 0, UPDATE_TIME = GETDATE()
         WHERE ID = @ID;
-        
+
         UPDATE tjfx_QUERY_WHITELIST
         SET IS_ACTIVE = 0
         WHERE FIELD_NAME = @FieldName;
-        
+
         COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
