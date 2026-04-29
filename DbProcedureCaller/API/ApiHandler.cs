@@ -25,83 +25,63 @@ namespace DbProcedureCaller.API
 
             try
             {
-                if (url.StartsWith("/login") && httpMethod == "POST")
+                if (url.StartsWith("/login") &amp;&amp; httpMethod == "POST")
                 {
                     return HandleLogin(inputStream);
                 }
-                else if (url == "/get-users" && httpMethod == "GET")
+                else if (url == "/get-users" &amp;&amp; httpMethod == "GET")
                 {
                     return HandleGetUsers();
                 }
-                else if (url == "/add-user" && httpMethod == "POST")
+                else if (url == "/add-user" &amp;&amp; httpMethod == "POST")
                 {
                     return HandleAddUser(inputStream);
                 }
-                else if (url == "/update-user" && httpMethod == "POST")
+                else if (url == "/update-user" &amp;&amp; httpMethod == "POST")
                 {
                     return HandleUpdateUser(inputStream);
                 }
-                else if (url == "/delete-user" && httpMethod == "POST")
+                else if (url == "/delete-user" &amp;&amp; httpMethod == "POST")
                 {
                     return HandleDeleteUser(inputStream);
                 }
-                else if (url == "/daily-analysis" && httpMethod == "POST")
+                else if (url == "/daily-analysis" &amp;&amp; httpMethod == "POST")
                 {
                     return HandleDailyAnalysis(inputStream);
                 }
-                else if (url == "/department-statistics" && httpMethod == "POST")
+                else if (url == "/department-statistics" &amp;&amp; httpMethod == "POST")
                 {
                     return HandleDepartmentStatistics(inputStream);
                 }
-                else if (url == "/doctor-statistics" && httpMethod == "POST")
+                else if (url == "/doctor-statistics" &amp;&amp; httpMethod == "POST")
                 {
                     return HandleDoctorStatistics(inputStream);
                 }
-                else if (url == "/category-statistics" && httpMethod == "POST")
+                else if (url == "/category-statistics" &amp;&amp; httpMethod == "POST")
                 {
                     return HandleCategoryStatistics(inputStream);
                 }
-                else if (url == "/get-system-types" && httpMethod == "GET")
+                else if (url == "/get-query-config" &amp;&amp; httpMethod == "GET")
                 {
-                    return HandleGetSystemTypes();
+                    return HandleGetQueryConfig();
                 }
-                else if (url.StartsWith("/get-reporters"))
+                else if (url.StartsWith("/execute-dynamic-query"))
                 {
-                    return HandleGetReporters(url);
+                    return HandleExecuteDynamicQuery(url);
                 }
-                else if (url.StartsWith("/get-reviewers"))
-                {
-                    return HandleGetReviewers(url);
-                }
-                else if (url.StartsWith("/get-departments"))
-                {
-                    return HandleGetDepartments(url);
-                }
-                else if (url.StartsWith("/get-patient-types"))
-                {
-                    return HandleGetPatientTypes(url);
-                }
-                else if (url.StartsWith("/get-result-status"))
-                {
-                    return HandleGetResultStatus();
-                }
-                else if (url == "/get-categories" && httpMethod == "GET")
-                {
-                    return HandleGetCategories(HttpUtility.ParseQueryString(url.Contains("?") ? url.Split('?')[1] : ""));
-                }
-                else if (url == "/get-hospital-info" && httpMethod == "GET")
+                else if (url == "/get-hospital-info" &amp;&amp; httpMethod == "GET")
                 {
                     return HandleGetHospitalInfo();
                 }
-                else if (url == "/update-db-config" && httpMethod == "POST")
+                else if (url == "/update-db-config" &amp;&amp; httpMethod == "POST")
                 {
                     return HandleUpdateDbConfig(inputStream);
                 }
-                else if (url == "/get-port" && httpMethod == "GET")
+                else if (url == "/get-port" &amp;&amp; httpMethod == "GET")
                 {
                     return HandleGetPort();
                 }
-                else if (url == "/set-port" && httpMethod == "POST")
+                else if (url == "/set-port" &amp;&amp; httpMethod == "POST")
                 {
                     return HandleSetPort(inputStream);
                 }
@@ -298,86 +278,37 @@ namespace DbProcedureCaller.API
             }
         }
 
-        private byte[] HandleGetSystemTypes()
+        private byte[] HandleGetQueryConfig()
         {
-            string json = _dailyAnalysisService.GetSystemTypes();
+            string json = _dailyAnalysisService.GetQueryConfig();
             return Encoding.UTF8.GetBytes(json);
         }
 
-        private byte[] HandleGetReporters(string url)
+        private byte[] HandleExecuteDynamicQuery(string url)
         {
-            string system = "";
-            if (url.Contains("?system="))
+            string fieldName = "";
+            string parentValue = "";
+            
+            if (url.Contains("?"))
             {
-                system = url.Substring(url.IndexOf("?system=") + 8);
-                if (system.Contains("&"))
+                string queryString = url.Substring(url.IndexOf("?") + 1);
+                string[] parameters = queryString.Split('&amp;');
+                foreach (string param in parameters)
                 {
-                    system = system.Substring(0, system.IndexOf("&"));
+                    string[] keyValue = param.Split('=');
+                    if (keyValue.Length == 2)
+                    {
+                        if (keyValue[0] == "fieldName")
+                            fieldName = System.Net.WebUtility.UrlDecode(keyValue[1]);
+                        else if (keyValue[0] == "parentValue")
+                            parentValue = System.Net.WebUtility.UrlDecode(keyValue[1]);
+                    }
                 }
             }
 
-            string json = _dailyAnalysisService.GetReporters(system);
+            LogHelper.LogInfo($"动态查询请求: fieldName={fieldName}, parentValue={parentValue}");
+            string json = _dailyAnalysisService.ExecuteDynamicQuery(fieldName, parentValue);
             return Encoding.UTF8.GetBytes(json);
-        }
-
-        private byte[] HandleGetReviewers(string url)
-        {
-            string system = "";
-            if (url.Contains("?system="))
-            {
-                system = url.Substring(url.IndexOf("?system=") + 8);
-                if (system.Contains("&"))
-                {
-                    system = system.Substring(0, system.IndexOf("&"));
-                }
-            }
-
-            string json = _dailyAnalysisService.GetReviewers(system);
-            return Encoding.UTF8.GetBytes(json);
-        }
-
-        private byte[] HandleGetDepartments(string url)
-        {
-            string system = "";
-            if (url.Contains("?system="))
-            {
-                system = url.Substring(url.IndexOf("?system=") + 8);
-                if (system.Contains("&"))
-                {
-                    system = system.Substring(0, system.IndexOf("&"));
-                }
-            }
-
-            string json = _dailyAnalysisService.GetDepartments(system);
-            return Encoding.UTF8.GetBytes(json);
-        }
-
-        private byte[] HandleGetPatientTypes(string url)
-        {
-            string system = "";
-            if (url.Contains("?system="))
-            {
-                system = url.Substring(url.IndexOf("?system=") + 8);
-                if (system.Contains("&"))
-                {
-                    system = system.Substring(0, system.IndexOf("&"));
-                }
-            }
-
-            string json = _dailyAnalysisService.GetPatientTypes(system);
-            return Encoding.UTF8.GetBytes(json);
-        }
-
-        private byte[] HandleGetResultStatus()
-        {
-            string json = _dailyAnalysisService.GetResultStatusTypes();
-            return Encoding.UTF8.GetBytes(json);
-        }
-
-        private byte[] HandleGetCategories(System.Collections.Specialized.NameValueCollection queryString)
-        {
-            string system = queryString["system"] ?? "";
-            return Encoding.UTF8.GetBytes("{\"success\": true, \"data\": [{\"code\": \"CT\", \"name\": \"CT\"}, {\"code\": \"MRI\", \"name\": \"核磁共振\"}, {\"code\": \"超声\", \"name\": \"超声\"}]}");
         }
 
         private string ExtractValue(string data, string key)
@@ -426,7 +357,7 @@ namespace DbProcedureCaller.API
                 if (formStart >= 0)
                 {
                     formStart += formPattern.Length;
-                    int formEnd = data.IndexOf('&', formStart);
+                    int formEnd = data.IndexOf('&amp;', formStart);
                     if (formEnd > formStart)
                     {
                         return System.Net.WebUtility.UrlDecode(data.Substring(formStart, formEnd - formStart));
@@ -545,10 +476,10 @@ namespace DbProcedureCaller.API
 
         private string ConvertDataTableToJson(DataTable dt)
         {
-            var rows = new System.Collections.Generic.List<System.Collections.Generic.Dictionary<string, object>>();
+            var rows = new System.Collections.Generic.List&lt;System.Collections.Generic.Dictionary&lt;string, object&gt;&gt;();
             foreach (DataRow dr in dt.Rows)
             {
-                var row = new System.Collections.Generic.Dictionary<string, object>();
+                var row = new System.Collections.Generic.Dictionary&lt;string, object&gt;();
                 foreach (DataColumn col in dt.Columns)
                 {
                     row.Add(col.ColumnName, dr[col] != DBNull.Value ? dr[col] : null);
