@@ -426,7 +426,7 @@ namespace DbProcedureCaller
 
             if (url == "/" || url == "/index.html" || url == "/login" || url == "/login.html")
             {
-                string templatePath = Path.Combine(Application.StartupPath, "templates", "index.html");
+                string templatePath = GetTemplatePath("index.html");
                 if (File.Exists(templatePath))
                 {
                     return Encoding.UTF8.GetBytes(File.ReadAllText(templatePath));
@@ -438,7 +438,7 @@ namespace DbProcedureCaller
             {
                 fileName += ".html";
             }
-            string filePath = Path.Combine(Application.StartupPath, "templates", fileName);
+            string filePath = GetTemplatePath(fileName);
             if (File.Exists(filePath))
             {
                 return Encoding.UTF8.GetBytes(File.ReadAllText(filePath));
@@ -573,6 +573,20 @@ namespace DbProcedureCaller
         private void btnExit_Click(object sender, EventArgs e)
         {
             this.Hide();
+        }
+
+        private string GetTemplatePath(string fileName)
+        {
+            string projectRoot = Path.GetDirectoryName(Path.GetDirectoryName(Application.StartupPath));
+            string templatePath = Path.Combine(projectRoot, "templates", fileName);
+            
+            if (File.Exists(templatePath))
+            {
+                return templatePath;
+            }
+            
+            string fallbackPath = Path.Combine(Application.StartupPath, "templates", fileName);
+            return fallbackPath;
         }
 
         private System.Windows.Forms.Label lblStatus;

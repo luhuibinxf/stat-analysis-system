@@ -10,6 +10,7 @@ namespace DbProcedureCaller.Services
     public class UserService
     {
         private static readonly object _lock = new object();
+        private static bool _tableChecked = false;
 
         public bool ValidateUser(string username, string password)
         {
@@ -48,95 +49,110 @@ namespace DbProcedureCaller.Services
 
         private void EnsureTableExists(SqlConnection conn)
         {
-            try
+            if (_tableChecked)
             {
-                string checkTableSql = "SELECT COUNT(*) FROM sys.tables WHERE name = 'TJYHB'";
-                using (SqlCommand checkCmd = new SqlCommand(checkTableSql, conn))
+                return;
+            }
+            
+            lock (_lock)
+            {
+                if (_tableChecked)
                 {
-                    int tableExists = (int)checkCmd.ExecuteScalar();
-                    
-                    if (tableExists == 0)
+                    return;
+                }
+                
+                try
+                {
+                    string checkTableSql = "SELECT COUNT(*) FROM sys.tables WHERE name = 'TJYHB'";
+                    using (SqlCommand checkCmd = new SqlCommand(checkTableSql, conn))
                     {
-                        LogHelper.LogInfo("TJYHB表不存在，正在创建...");
+                        int tableExists = (int)checkCmd.ExecuteScalar();
                         
-                        string createTableSql = @"
-                            CREATE TABLE TJYHB (
-                                ID INT PRIMARY KEY,
-                                YHM VARCHAR(50) NOT NULL UNIQUE,
-                                YKL VARCHAR(100) NOT NULL,
-                                QX INT DEFAULT 0,
-                                SFY INT DEFAULT 1
-                            )";
-                        using (SqlCommand createCmd = new SqlCommand(createTableSql, conn))
+                        if (tableExists == 0)
                         {
-                            createCmd.ExecuteNonQuery();
-                            LogHelper.LogInfo("TJYHB表创建成功");
-                        }
-
-                        string insertDefaultUserSql = "INSERT INTO TJYHB (ID, YHM, YKL, QX, SFY) VALUES (1, 'lhbdb', '241023', 1, 1)";
-                        using (SqlCommand insertCmd = new SqlCommand(insertDefaultUserSql, conn))
-                        {
-                            insertCmd.ExecuteNonQuery();
-                            LogHelper.LogInfo("默认管理员用户创建成功");
-                        }
-                    }
-                    else
-                    {
-                        LogHelper.LogInfo("TJYHB表已存在，检查并添加缺失的列...");
-                        
-                        AddMissingColumn(conn, "YHM", "VARCHAR(50) NOT NULL");
-                        AddMissingColumn(conn, "YKL", "VARCHAR(100) NOT NULL");
-                        AddMissingColumn(conn, "QX", "INT DEFAULT 0");
-                        AddMissingColumn(conn, "SFY", "INT DEFAULT 1");
-                        
-                        LogHelper.LogInfo("TJYHB表结构检查完成");
-                        
-                        string checkUniqueSql = "SELECT COUNT(*) FROM sys.indexes WHERE name = 'UQ_TJYHB_YHM' AND object_id = OBJECT_ID('TJYHB')";
-                        using (SqlCommand checkUniqueCmd = new SqlCommand(checkUniqueSql, conn))
-                        {
-                            int hasUnique = (int)checkUniqueCmd.ExecuteScalar();
-                            if (hasUnique == 0)
+                            LogHelper.LogInfo("TJYHB表不存在，正在创建...");
+                            
+                            string createTableSql = @"
+                                CREATE TABLE TJYHB (
+                                    ID INT PRIMARY KEY,
+                                    YHM VARCHAR(50) NOT NULL UNIQUE,
+                                    YKL VARCHAR(100) NOT NULL,
+                                    QX INT DEFAULT 0,
+                                    SFY INT DEFAULT 1
+                                )";
+                            using (SqlCommand createCmd = new SqlCommand(createTableSql, conn))
                             {
-                                try
-                                {
-                                    string addUniqueSql = "ALTER TABLE TJYHB ADD CONSTRAINT UQ_TJYHB_YHM UNIQUE (YHM)";
-                                    using (SqlCommand addUniqueCmd = new SqlCommand(addUniqueSql, conn))
-                                    {
-                                        addUniqueCmd.ExecuteNonQuery();
-                                        LogHelper.LogInfo("已添加YHM唯一约束");
-                                    }
-                                }
-                                catch { }
+                                createCmd.ExecuteNonQuery();
+                                LogHelper.LogInfo("TJYHB表创建成功");
+                            }
+
+                            string insertDefaultUserSql = "INSERT INTO TJYHB (ID, YHM, YKL, QX, SFY) VALUES (1, 'lhbdb', '241023', 1, 1)";
+                            using (SqlCommand insertCmd = new SqlCommand(insertDefaultUserSql, conn))
+                            {
+                                insertCmd.ExecuteNonQuery();
+                                LogHelper.LogInfo("默认管理员用户创建成功");
                             }
                         }
-                        
-                        string checkUserSql = "SELECT COUNT(*) FROM TJYHB WHERE YHM = 'lhbdb'";
-                        using (SqlCommand checkUserCmd = new SqlCommand(checkUserSql, conn))
+                        else
                         {
-                            int userExists = (int)checkUserCmd.ExecuteScalar();
-                            if (userExists == 0)
+                            LogHelper.LogInfo("TJYHB表已存在，检查并添加缺失的列...");
+                            
+                            AddMissingColumn(conn, "YHM", "VARCHAR(50) NOT NULL");
+                            AddMissingColumn(conn, "YKL", "VARCHAR(100) NOT NULL");
+                            AddMissingColumn(conn, "QX", "INT DEFAULT 0");
+                            AddMissingColumn(conn, "SFY", "INT DEFAULT 1");
+                            
+                            LogHelper.LogInfo("TJYHB表结构检查完成");
+                            
+                            string checkUniqueSql = "SELECT COUNT(*) FROM sys.indexes WHERE name = 'UQ_TJYHB_YHM' AND object_id = OBJECT_ID('TJYHB')";
+                            using (SqlCommand checkUniqueCmd = new SqlCommand(checkUniqueSql, conn))
                             {
-                                string insertDefaultUserSql = "INSERT INTO TJYHB (ID, YHM, YKL, QX, SFY) VALUES (1, 'lhbdb', '241023', 1, 1)";
-                                using (SqlCommand insertCmd = new SqlCommand(insertDefaultUserSql, conn))
+                                int hasUnique = (int)checkUniqueCmd.ExecuteScalar();
+                                if (hasUnique == 0)
                                 {
                                     try
                                     {
-                                        insertCmd.ExecuteNonQuery();
-                                        LogHelper.LogInfo("默认管理员用户不存在，已创建");
+                                        string addUniqueSql = "ALTER TABLE TJYHB ADD CONSTRAINT UQ_TJYHB_YHM UNIQUE (YHM)";
+                                        using (SqlCommand addUniqueCmd = new SqlCommand(addUniqueSql, conn))
+                                        {
+                                            addUniqueCmd.ExecuteNonQuery();
+                                            LogHelper.LogInfo("已添加YHM唯一约束");
+                                        }
                                     }
-                                    catch (Exception ex)
+                                    catch { }
+                                }
+                            }
+                            
+                            string checkUserSql = "SELECT COUNT(*) FROM TJYHB WHERE YHM = 'lhbdb'";
+                            using (SqlCommand checkUserCmd = new SqlCommand(checkUserSql, conn))
+                            {
+                                int userExists = (int)checkUserCmd.ExecuteScalar();
+                                if (userExists == 0)
+                                {
+                                    string insertDefaultUserSql = "INSERT INTO TJYHB (ID, YHM, YKL, QX, SFY) VALUES (1, 'lhbdb', '241023', 1, 1)";
+                                    using (SqlCommand insertCmd = new SqlCommand(insertDefaultUserSql, conn))
                                     {
-                                        LogHelper.LogInfo($"插入默认用户失败（可能ID已存在）: {ex.Message}");
+                                        try
+                                        {
+                                            insertCmd.ExecuteNonQuery();
+                                            LogHelper.LogInfo("默认管理员用户不存在，已创建");
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            LogHelper.LogInfo($"插入默认用户失败（可能ID已存在）: {ex.Message}");
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                LogHelper.LogError($"初始化数据库表失败: {ex.Message}");
+                catch (Exception ex)
+                {
+                    LogHelper.LogError($"初始化数据库表失败: {ex.Message}");
+                }
+
+                _tableChecked = true;
             }
         }
 
