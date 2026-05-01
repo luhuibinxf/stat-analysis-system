@@ -12,6 +12,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
+        /* 全局配色 - 深蓝商务风 */
         :root {
             --primary: #1a73e8;
             --primary-dark: #1557b0;
@@ -33,6 +34,7 @@
             overflow-x: hidden;
         }
 
+        /* 背景动态粒子效果 */
         body::before {
             content: '';
             position: fixed;
@@ -42,12 +44,13 @@
             height: 100%;
             background:
                 radial-gradient(circle at 20% 50%, rgba(26, 115, 232, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(0, 201, 167, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(0, 201, 167, 0.06) 0%, transparent 50%),
                 radial-gradient(circle at 50% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 50%);
             pointer-events: none;
             z-index: 0;
         }
 
+        /* 导航栏 - 毛玻璃效果 */
         .navbar {
             background: rgba(15, 23, 42, 0.85) !important;
             backdrop-filter: blur(20px);
@@ -78,10 +81,13 @@
             font-weight: 600;
         }
 
+        /* 卡片设计 */
         .card {
             border: none;
             border-radius: 24px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.3),
+                0 1px 3px rgba(0, 0, 0, 0.2);
             overflow: hidden;
             background: var(--card-bg);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -121,6 +127,7 @@
             letter-spacing: 0.5px;
         }
 
+        /* 登录页面优化 */
         .login-card {
             width: 100%;
             max-width: 440px;
@@ -160,6 +167,7 @@
             color: var(--text-secondary);
         }
 
+        /* 主菜单卡片 */
         .menu-card {
             cursor: pointer;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -184,7 +192,9 @@
 
         .menu-card:hover {
             transform: translateY(-12px);
-            box-shadow: 0 30px 60px rgba(26, 115, 232, 0.15), 0 5px 15px rgba(0, 0, 0, 0.08);
+            box-shadow:
+                0 30px 60px rgba(26, 115, 232, 0.15),
+                0 5px 15px rgba(0, 0, 0, 0.08);
             border-color: rgba(26, 115, 232, 0.2);
         }
 
@@ -220,6 +230,7 @@
             font-size: 0.9rem;
         }
 
+        /* 按钮设计 */
         .btn-primary {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             border: none;
@@ -269,6 +280,7 @@
             transition: all 0.3s;
         }
 
+        /* 表单控件 */
         .form-control, .form-select {
             border-radius: 12px;
             border: 2px solid #e2e8f0;
@@ -292,6 +304,7 @@
             font-size: 0.95rem;
         }
 
+        /* 表格优化 */
         .table {
             border-radius: 16px;
             overflow: hidden;
@@ -326,6 +339,7 @@
             border-color: rgba(0, 0, 0, 0.05);
         }
 
+        /* 模态框优化 */
         .modal-content {
             border-radius: 24px;
             border: none;
@@ -378,6 +392,7 @@
             opacity: 1;
         }
 
+        /* Alert优化 */
         .alert {
             border-radius: 12px;
             border: none;
@@ -395,6 +410,7 @@
             color: #065f46;
         }
 
+        /* Badge优化 */
         .badge {
             font-weight: 600;
             padding: 5px 14px;
@@ -419,6 +435,7 @@
             background: linear-gradient(135deg, #f59e0b, #d97706) !important;
         }
 
+        /* 统计数值 */
         .stat-value {
             font-size: 1.5rem;
             font-weight: 700;
@@ -436,6 +453,7 @@
             color: rgba(255, 255, 255, 0.8);
         }
 
+        /* 页面标题 */
         h2.text-center {
             font-weight: 700;
             font-size: 2rem;
@@ -443,6 +461,7 @@
             text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
 
+        /* Tab优化 */
         .nav-tabs {
             border-bottom: 2px solid rgba(0, 0, 0, 0.06);
         }
@@ -468,11 +487,13 @@
             border-bottom-color: var(--primary);
         }
 
+        /* 内容面板 */
         #panelContent .bg-white {
             border-radius: 20px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
         }
 
+        /* 返回按钮 */
         .btn-secondary {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -485,11 +506,20 @@
             color: white;
         }
 
+        /* 连接测试卡片 */
+        .card.bg-info\/10 {
+            background: rgba(26, 115, 232, 0.05) !important;
+            border: 1px solid rgba(26, 115, 232, 0.1);
+            border-radius: 16px;
+        }
+
+        /* 容器优化 */
         .container {
             position: relative;
             z-index: 1;
         }
 
+        /* 登录面板居中优化 */
         .min-vh-100 {
             min-height: 100vh;
         }
@@ -498,18 +528,66 @@
             align-items: center !important;
         }
 
+        /* 响应式优化 */
         @media (max-width: 768px) {
             .login-card {
                 max-width: 90%;
             }
+
             .menu-card {
                 margin-bottom: 1rem;
             }
+
             h2.text-center {
                 font-size: 1.5rem;
             }
         }
 
+        /* 加载动画 */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* 输入框placeholder优化 */
+        ::placeholder {
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+
+        /* 滚动条优化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .text-white-50 {
+            color: rgba(255, 255, 255, 0.5) !important;
+        }
+
+        .text-sm {
+            font-size: 0.875rem !important;
+        }
+
+        .bg-gray-50 {
+            background-color: #f8fafc !important;
+        }
+
+        /* 页面进入动画 */
         @keyframes fadeInUp {
             from {
                 opacity: 0;
@@ -521,17 +599,17 @@
             }
         }
 
-        #mainMenu .col-md-2 {
+        #mainMenu .col-md-4 {
             animation: fadeInUp 0.5s ease-out;
             animation-fill-mode: both;
         }
 
-        #mainMenu .col-md-2:nth-child(1) { animation-delay: 0.1s; }
-        #mainMenu .col-md-2:nth-child(2) { animation-delay: 0.2s; }
-        #mainMenu .col-md-2:nth-child(3) { animation-delay: 0.3s; }
-        #mainMenu .col-md-2:nth-child(4) { animation-delay: 0.4s; }
-        #mainMenu .col-md-2:nth-child(5) { animation-delay: 0.5s; }
-        #mainMenu .col-md-2:nth-child(6) { animation-delay: 0.6s; }
+        #mainMenu .col-md-4:nth-child(1) { animation-delay: 0.1s; }
+        #mainMenu .col-md-4:nth-child(2) { animation-delay: 0.2s; }
+        #mainMenu .col-md-4:nth-child(3) { animation-delay: 0.3s; }
+        #mainMenu .col-md-4:nth-child(4) { animation-delay: 0.4s; }
+        #mainMenu .col-md-4:nth-child(5) { animation-delay: 0.5s; }
+        #mainMenu .col-md-4:nth-child(6) { animation-delay: 0.6s; }
     </style>
 </head>
 <body>
@@ -577,44 +655,44 @@
 
         <div id="mainMenu" style="display: none;">
             <h2 class="text-center text-white mb-5">配置中心</h2>
-            <div class="row g-3">
-                <div class="col-md-2">
-                    <div class="card menu-card p-3 text-center" onclick="showUserConfig()">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card menu-card p-4 text-center" onclick="showUserConfig()">
                         <div class="menu-icon">👥</div>
                         <h4>用户配置和维护</h4>
                         <p class="text-muted">管理系统用户</p>
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <div class="card menu-card p-3 text-center" onclick="showPermissionConfig()">
+                <div class="col-md-4">
+                    <div class="card menu-card p-4 text-center" onclick="showPermissionConfig()">
                         <div class="menu-icon">🔐</div>
                         <h4>权限维护</h4>
                         <p class="text-muted">管理用户权限</p>
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <div class="card menu-card p-3 text-center" onclick="showParamConfig()">
+                <div class="col-md-4">
+                    <div class="card menu-card p-4 text-center" onclick="showParamConfig()">
                         <div class="menu-icon">⚙️</div>
                         <h4>参数配置</h4>
                         <p class="text-muted">系统参数设置</p>
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <div class="card menu-card p-3 text-center" onclick="DailyAnalysis.init()">
+                <div class="col-md-4">
+                    <div class="card menu-card p-4 text-center" onclick="DailyAnalysis.init()">
                         <div class="menu-icon">📊</div>
                         <h4>检查每日分析</h4>
                         <p class="text-muted">检查统计查询</p>
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <div class="card menu-card p-3 text-center" onclick="showComplexConfig()">
+                <div class="col-md-4">
+                    <div class="card menu-card p-4 text-center" onclick="showComplexConfig()">
                         <div class="menu-icon">📋</div>
                         <h4>复杂存储配置</h4>
                         <p class="text-muted">存储过程管理</p>
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <div class="card menu-card p-3 text-center" onclick="showServerConfig()">
+                <div class="col-md-4">
+                    <div class="card menu-card p-4 text-center" onclick="showServerConfig()">
                         <div class="menu-icon">🖥️</div>
                         <h4>服务器配置</h4>
                         <p class="text-muted">服务器参数设置</p>
@@ -678,14 +756,16 @@
     <script>
         var currentUser = null;
 
-        function login(event) {
-            if (event) {
-                event.preventDefault();
-                event.stopPropagation();
+        function login() {
+            var username = $('#username').val().trim();
+            var password = $('#password').val().trim();
+            
+            if (!username || !password) {
+                $('#loginError').text('请输入用户名和密码').show();
+                return;
             }
             
-            var username = $('#username').val();
-            var password = $('#password').val();
+            $('#loginError').hide();
             
             $.ajax({
                 url: '/login',
@@ -693,24 +773,33 @@
                 contentType: 'application/json',
                 dataType: 'json',
                 data: JSON.stringify({username: username, password: password}),
+                timeout: 10000,
                 success: function(resp) {
                     console.log('Login response:', resp);
-                    if (resp.success) {
+                    if (resp && resp.success) {
                         currentUser = {username: username, isAdmin: resp.isAdmin};
                         $('#currentUser').text(username);
                         $('#loginPanel').hide();
                         $('#mainMenu').show();
                     } else {
-                        $('#loginError').text('用户名或密码错误').show();
+                        $('#loginError').text(resp && resp.error ? resp.error : '用户名或密码错误').show();
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('Login error:', status, error);
-                    $('#loginError').text('连接服务器失败: ' + error).show();
+                    console.error('Login error:', xhr.status, status, error);
+                    var msg = '登录失败';
+                    if (xhr.status === 0) {
+                        msg = '无法连接服务器，请检查网络';
+                    } else if (xhr.status === 404) {
+                        msg = '服务接口不存在';
+                    } else if (xhr.status === 500) {
+                        msg = '服务器内部错误';
+                    } else if (status === 'timeout') {
+                        msg = '请求超时';
+                    }
+                    $('#loginError').text(msg).show();
                 }
             });
-            
-            return false;
         }
 
         function logout() {

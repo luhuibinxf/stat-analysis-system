@@ -579,14 +579,7 @@ namespace DbProcedureCaller
         {
             string projectRoot = Path.GetDirectoryName(Path.GetDirectoryName(Application.StartupPath));
             string templatePath = Path.Combine(projectRoot, "templates", fileName);
-            
-            if (File.Exists(templatePath))
-            {
-                return templatePath;
-            }
-            
-            string fallbackPath = Path.Combine(Application.StartupPath, "templates", fileName);
-            return fallbackPath;
+            return templatePath;
         }
 
         private System.Windows.Forms.Label lblStatus;

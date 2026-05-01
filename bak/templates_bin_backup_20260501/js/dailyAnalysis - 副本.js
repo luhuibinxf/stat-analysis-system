@@ -117,23 +117,14 @@ var DailyAnalysis = (function() {
         var select = $('#' + fieldName);
         var config = queryConfig.find(function(c) { return c.fieldName === fieldName; });
         
-        var displayNameMap = {
-            'system': '系统',
-            'reporter': '报告医生',
-            'reviewer': '审核医生',
-            'technician': '技师',
-            'department': '科室',
-            'category': '检查类型',
-            'patientType': '病人类型',
-            'resultStatus': '阴阳性'
-        };
-        var displayName = displayNameMap[fieldName] || (config ? config.displayName : '');
-        var placeholder = '请选择' + displayName;
-        
         if (!allOptionsCache) {
             select.empty();
-            select.append('<option value="">' + placeholder + '</option>');
-            select.append('<option value="" disabled>加载中...</option>');
+            if (config && config.isMultiple) {
+                select.append('<option value="">加载中...</option>');
+            } else {
+                select.append('<option value="">' + (config ? config.placeholder : '请选择') + '</option>');
+                select.append('<option value="" disabled>加载中...</option>');
+            }
             setTimeout(function() {
                 loadFieldOptions(fieldName, parentValue, callback);
             }, 100);
@@ -169,10 +160,16 @@ var DailyAnalysis = (function() {
         }
         
         select.empty();
-        select.append('<option value="">' + placeholder + '</option>');
-        data.forEach(function(item) {
-            select.append('<option value="' + htmlEncode(item.code) + '">' + htmlEncode(item.name) + '</option>');
-        });
+        if (config && config.isMultiple) {
+            data.forEach(function(item) {
+                select.append('<option value="' + htmlEncode(item.code) + '">' + htmlEncode(item.name) + '</option>');
+            });
+        } else {
+            select.append('<option value="">' + (config ? config.placeholder : '请选择') + '</option>');
+            data.forEach(function(item) {
+                select.append('<option value="' + htmlEncode(item.code) + '">' + htmlEncode(item.name) + '</option>');
+            });
+        }
         
         if (callback) callback();
     }
@@ -204,27 +201,32 @@ var DailyAnalysis = (function() {
         
         var visibleFields = queryConfig.filter(function(c) { return c.isVisible; });
         
-        var displayNameMap = {
-            'system': '系统',
-            'reporter': '报告医生',
-            'reviewer': '审核医生',
-            'technician': '技师',
-            'department': '科室',
-            'category': '检查类型',
-            'patientType': '病人类型',
-            'resultStatus': '阴阳性'
-        };
-        
         visibleFields.forEach(function(config) {
-            var displayName = displayNameMap[config.fieldName] || config.displayName;
-            var placeholder = '请选择' + displayName;
+            var displayName = config.displayName;
+            var placeholder = config.placeholder;
             
-            // 统一使用普通select样式，移除multiple属性确保样式一致
-            var fieldHtml = '<div class="da-filter-item" style="width:140px;min-width:140px;max-width:140px;flex:0 0 auto;margin:0;padding:0;">';
-            fieldHtml += '<label style="color:#475569;font-weight:600;font-size:0.8rem;margin-bottom:6px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + htmlEncode(displayName) + '</label>';
-            fieldHtml += '<select id="' + config.fieldName + '" onchange="DailyAnalysis.onParentFieldChanged(\'' + config.fieldName + '\')" style="width:140px;min-width:140px;max-width:140px;height:32px;border-radius:10px;border:1px solid #cbd5e1;padding:0 12px;font-size:0.85rem;background:white;cursor:pointer;box-sizing:border-box;margin:0;">';
-            fieldHtml += '<option value="">' + placeholder + '</option>';
-            fieldHtml += '</select>';
+            if (config.fieldName === 'resultStatus') {
+                displayName = '阴阳性';
+                placeholder = '请选择阴阳性';
+            }
+            if (config.fieldName === 'patientType') {
+                displayName = '病人类型';
+                placeholder = '请选择病人类型';
+            }
+            
+            var fieldHtml = '<div class="da-filter-item">';
+            fieldHtml += '<label>' + htmlEncode(displayName) + '</label>';
+            
+            if (config.isMultiple) {
+                fieldHtml += '<select id="' + config.fieldName + '" multiple>';
+                fieldHtml += '<option value="">加载中...</option>';
+                fieldHtml += '</select>';
+            } else {
+                fieldHtml += '<select id="' + config.fieldName + '" onchange="DailyAnalysis.onParentFieldChanged(\'' + config.fieldName + '\')">';
+                fieldHtml += '<option value="">' + placeholder + '</option>';
+                fieldHtml += '</select>';
+            }
+            
             fieldHtml += '</div>';
             container.append(fieldHtml);
         });
@@ -638,10 +640,8 @@ var DailyAnalysis = (function() {
         var pageStyle = `
         <style>
         .da-page {
-            width: 96%;
-            max-width: none;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 16px;
             animation: fadeIn 0.4s ease-out;
         }
         @keyframes fadeIn {
@@ -651,83 +651,32 @@ var DailyAnalysis = (function() {
         /* 查询区域卡片 */
         .da-query-card {
             background: linear-gradient(145deg, #ffffff, #f8fafc);
-            border-radius: 20px;
-            padding: 24px 28px;
-            margin-bottom: 24px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8);
+            border-radius: 24px;
+            padding: 32px;
+            margin-bottom: 28px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8);
             border: 1px solid rgba(0,0,0,0.05);
         }
-        .da-query-row {
-            display: flex;
-            align-items: flex-end;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-        .da-query-date-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        .da-query-btn-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin-left: auto;
-        }
-        .da-query-actions {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .da-query-label {
-            color: #475569;
+        .da-query-card label {
+            color: #1e293b !important;
             font-weight: 600;
-            font-size: 0.8rem;
-            display: block;
-        }
-        .da-date-inputs {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .da-date-input {
-            border-radius: 10px;
-            border: 1px solid #cbd5e1;
-            padding: 0 12px;
-            font-size: 0.85rem;
-            transition: all 0.25s;
-            background: white;
-            height: 42px;
-            cursor: pointer;
-            width: 150px;
-            box-sizing: border-box;
-        }
-        .da-date-input:focus {
-            border-color: #1a73e8;
-            box-shadow: 0 0 0 3px rgba(26,115,232,0.1);
-            outline: none;
-        }
-        .da-date-separator {
-            color: #94a3b8;
-            font-size: 0.85rem;
-        }
-        .da-dropdown-wrapper {
-            position: relative;
+            font-size: 0.95rem;
+            margin-bottom: 10px;
         }
         /* 统计卡片 */
         .da-stat-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-            margin-bottom: 24px;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            margin-bottom: 28px;
         }
         .da-stat-card {
             background: linear-gradient(145deg, #ffffff, #fafafa);
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+            border-radius: 20px;
+            padding: 28px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
             border: 1px solid rgba(0,0,0,0.04);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
         }
@@ -738,27 +687,27 @@ var DailyAnalysis = (function() {
             left: 0;
             right: 0;
             height: 4px;
-            border-radius: 16px 16px 0 0;
+            border-radius: 20px 20px 0 0;
         }
         .da-stat-card:nth-child(1)::before { background: linear-gradient(90deg, #3b82f6, #60a5fa, #93c5fd); }
         .da-stat-card:nth-child(2)::before { background: linear-gradient(90deg, #8b5cf6, #a78bfa, #c4b5fd); }
         .da-stat-card:nth-child(3)::before { background: linear-gradient(90deg, #ef4444, #f87171, #fca5a5); }
         .da-stat-card:nth-child(4)::before { background: linear-gradient(90deg, #22c55e, #4ade80, #86efac); }
         .da-stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 16px 50px rgba(0,0,0,0.12);
         }
         .da-stat-label {
-            font-size: 0.85rem;
+            font-size: 0.95rem;
             color: #64748b;
             font-weight: 500;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
         }
         .da-stat-value {
-            font-size: 2.2rem;
+            font-size: 2.5rem;
             font-weight: 800;
             line-height: 1.1;
             letter-spacing: -1px;
@@ -770,139 +719,115 @@ var DailyAnalysis = (function() {
         /* 结果区域卡片 */
         .da-result-card {
             background: linear-gradient(145deg, #ffffff, #fafafa);
-            border-radius: 20px;
-            padding: 28px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
             border: 1px solid rgba(0,0,0,0.04);
-            margin-bottom: 24px;
+            margin-bottom: 28px;
         }
         .da-result-card h5 {
             font-weight: 700;
             color: #1e293b;
-            font-size: 1.15rem;
-            margin-bottom: 20px;
+            font-size: 1.25rem;
+            margin-bottom: 24px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
         /* 图表区域卡片 */
         .da-chart-card {
             background: linear-gradient(145deg, #ffffff, #fafafa);
-            border-radius: 20px;
-            padding: 28px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
             border: 1px solid rgba(0,0,0,0.04);
-            margin-bottom: 24px;
+            margin-bottom: 28px;
         }
         .da-chart-card h5 {
             font-weight: 700;
             color: #1e293b;
-            font-size: 1.15rem;
-            margin-bottom: 20px;
+            font-size: 1.25rem;
+            margin-bottom: 24px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
-        /* 按钮优化 - 主按钮 */
+        /* 按钮优化 */
         .da-btn-primary {
             background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);      
             border: none;
-            border-radius: 12px;
-            padding: 0 22px;
-            height: 42px;
+            border-radius: 10px;
+            padding: 0 20px;
+            height: 38px;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: white;
             cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 14px rgba(26,115,232,0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 16px rgba(26,115,232,0.3);
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
-            white-space: nowrap;
+            gap: 6px;
         }
         .da-btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(26,115,232,0.4);
-            background: linear-gradient(135deg, #1c7ff5 0%, #1763c2 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(26,115,232,0.45);
         }
         .da-btn-primary:active {
-            transform: translateY(0);
-            box-shadow: 0 4px 12px rgba(26,115,232,0.3);
+            transform: translateY(-1px);
         }
-        /* 按钮优化 - 次要按钮 */
         .da-btn-secondary {
             background: rgba(100,116,139,0.08);
-            border: 1px solid #cbd5e1;
-            border-radius: 12px;
-            padding: 0 22px;
-            height: 42px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 0 20px;
+            height: 38px;
             font-weight: 600;
-            font-size: 0.9rem;
-            color: #475569;
+            font-size: 0.85rem;
+            color: #64748b;
             cursor: pointer;
-            transition: all 0.25s;
+            transition: all 0.3s;
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
-            white-space: nowrap;
+            gap: 6px;
         }
         .da-btn-secondary:hover {
             background: rgba(100,116,139,0.15);
-            border-color: #94a3b8;
-            color: #334155;
-            transform: translateY(-1px);
+            border-color: rgba(100,116,139,0.3);
+            color: #475569;
         }
-        .da-btn-secondary:active {
-            transform: translateY(0);
-        }
-        /* 按钮优化 - 轮廓按钮 */
         .da-btn-outline {
             background: white;
-            border: 1px solid #cbd5e1;
-            border-radius: 12px;
-            padding: 0 18px;
-            height: 42px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 0 14px;
+            height: 38px;
             font-weight: 600;
             font-size: 0.85rem;
             color: #475569;
             cursor: pointer;
-            transition: all 0.25s;
+            transition: all 0.3s;
             display: inline-flex;
             align-items: center;
-            justify-content: center;
             gap: 6px;
-            white-space: nowrap;
         }
         .da-btn-outline:hover {
-            background: #f8fafc;
-            border-color: #94a3b8;
+            background: rgba(26,115,232,0.06);
+            border-color: rgba(26,115,232,0.4);
             color: #1a73e8;
-            transform: translateY(-1px);
-        }
-        .da-btn-outline:active {
-            transform: translateY(0);
         }
         /* 下拉菜单优化 */
         .da-dropdown-menu {
-            border-radius: 14px;
+            border-radius: 16px;
             border: 1px solid rgba(0,0,0,0.08);
-            box-shadow: 0 10px 40px rgba(0,0,0,0.12);
-            padding: 6px;
-            min-width: 160px;
+            box-shadow: 0 12px 48px rgba(0,0,0,0.15);
+            padding: 8px;
+            min-width: 170px;
             background: white;
             animation: slideDown 0.2s ease-out;
-            list-style: none;
-            margin: 6px 0 0 0;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            z-index: 1000;
         }
         @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-6px); }
+            from { opacity: 0; transform: translateY(-8px); }
             to { opacity: 1; transform: translateY(0); }
         }
         .da-dropdown-menu li {
@@ -911,8 +836,8 @@ var DailyAnalysis = (function() {
         .da-dropdown-menu a {
             display: block;
             border-radius: 10px;
-            padding: 10px 14px;
-            font-size: 0.9rem;
+            padding: 10px 16px;
+            font-size: 0.95rem;
             color: #334155;
             transition: all 0.2s;
             text-decoration: none;
@@ -920,83 +845,59 @@ var DailyAnalysis = (function() {
         .da-dropdown-menu a:hover {
             background: linear-gradient(135deg, rgba(26,115,232,0.08), rgba(26,115,232,0.04));
             color: #1a73e8;
-            padding-left: 18px;
+            padding-left: 20px;
         }
         /* 筛选条件区域 */
         .da-filter-section {
-            margin-top: 20px;
-            padding-top: 20px;
+            margin-top: 24px;
+            padding-top: 24px;
             border-top: 1px solid rgba(0,0,0,0.06);
             display: flex;
-            flex-wrap: nowrap !important;
-            gap: 12px;
+            flex-wrap: wrap;
+            gap: 16px;
             align-items: flex-end;
-            overflow-x: auto;
-            overflow-y: hidden;
-            padding-bottom: 8px;
-            width: 100%;
-        }
-        .da-filter-section > * {
-            flex-shrink: 0 !important;
-        }
-        .da-filter-section::-webkit-scrollbar {
-            height: 4px;
-        }
-        .da-filter-section::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
         }
         .da-filter-item {
-            display: flex;
-            flex-direction: column;
-            flex: 0 0 auto !important;
-            width: 150px !important;
-            min-width: 150px !important;
-            max-width: 150px !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            white-space: nowrap;
+            display: flex !important;
+            flex-direction: column !important;
+            width: 150px;
+            flex-shrink: 0;
+            align-items: flex-start !important;
         }
         .da-filter-item label {
-            color: #475569;
+            color: #334155;
             font-weight: 600;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             margin-bottom: 6px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            display: block;
         }
         .da-filter-item select,
         .da-filter-item input,
-        .da-filter-input {
+        .da-filter-input,
+        .da-filter-item select.form-select,
+        .da-filter-item input.form-control {
             border-radius: 10px !important;
-            border: 1px solid #cbd5e1 !important;
-            padding: 0 12px !important;
+            border: 2px solid #e2e8f0 !important;
+            padding: 8px 12px !important;
             font-size: 0.85rem !important;
-            transition: all 0.25s;
+            transition: all 0.3s;
             background: white !important;
-            height: 32px !important;
-            line-height: 32px !important;
+            height: 38px !important;
             cursor: pointer;
             width: 140px !important;
             min-width: 140px !important;
             max-width: 140px !important;
             box-sizing: border-box !important;
-            margin: 0 !important;
-            overflow: hidden;
+            flex-shrink: 0;
         }
-        /* 强制多选框显示为单行高度 */
         .da-filter-item select[multiple] {
-            height: 32px !important;
-            padding: 0 12px !important;
-            overflow-y: auto;
+            padding: 6px;
+            height: 62px;
         }
         .da-filter-item select:focus,
         .da-filter-item input:focus {
-            border-color: #1a73e8 !important;
-            box-shadow: 0 0 0 3px rgba(26,115,232,0.1) !important;
-            outline: none !important;
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 4px rgba(26,115,232,0.12);
+            outline: none;
         }
         /* 子按钮组 */
         .da-sub-btn-group {
@@ -1004,40 +905,33 @@ var DailyAnalysis = (function() {
             flex-wrap: wrap;
             gap: 10px;
         }
-        .da-sub-btn {
-            background: white;
-            border: 1px solid #cbd5e1;
+        .da-sub-btn-group .da-sub-btn {
+            background: linear-gradient(145deg, #f8fafc, #f1f5f9);
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
-            padding: 0 18px;
-            height: 40px;
-            font-size: 0.85rem;
+            padding: 10px 22px;
+            font-size: 0.9rem;
             font-weight: 600;
             color: #475569;
             cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s;
             display: inline-flex;
             align-items: center;
-            justify-content: center;
             gap: 6px;
-            white-space: nowrap;
         }
-        .da-sub-btn:hover {
-            background: linear-gradient(135deg, rgba(26,115,232,0.08), rgba(26,115,232,0.04));
-            border-color: #93c5fd;
+        .da-sub-btn-group .da-sub-btn:hover {
+            background: linear-gradient(135deg, rgba(26,115,232,0.1), rgba(26,115,232,0.05));
+            border-color: rgba(26,115,232,0.3);
             color: #1a73e8;
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(26,115,232,0.15);
-        }
-        .da-sub-btn:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 6px rgba(26,115,232,0.1);
+            box-shadow: 0 4px 16px rgba(26,115,232,0.15);
         }
         /* 表格容器 */
         .da-table-wrapper {
-            border-radius: 14px;
+            border-radius: 16px;
             overflow: hidden;
             border: 1px solid rgba(0,0,0,0.06);
-            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
         }
         /* 加载状态 */
         .da-loading {
@@ -1056,18 +950,8 @@ var DailyAnalysis = (function() {
             justify-content: center;
             padding: 48px;
             color: #94a3b8;
-            font-size: 1rem;
+            font-size: 1.1rem;
             text-align: center;
-        }
-        /* 响应式优化 */
-        @media (max-width: 768px) {
-            .da-page { padding: 12px; }
-            .da-query-card { padding: 20px; }
-            .da-stat-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-            .da-stat-value { font-size: 1.8rem; }
-            .da-filter-item { width: 100% !important; min-width: auto !important; }
-            .da-sub-btn-group { width: 100%; }
-            .da-sub-btn { flex: 1; min-width: 0; }
         }
         </style>`;
 
@@ -1077,41 +961,49 @@ var DailyAnalysis = (function() {
         // ===== 顶部查询区域 =====
         html += '<div class="da-query-card">';
 
-        // 第一行：日期范围 + 快捷选择 + 查询/清除按钮
-        html += '<div class="da-query-row">';
-        html += '<div class="da-query-date-group">';
-        html += '<label class="da-query-label">日期范围</label>';
-        html += '<div class="da-date-inputs">';
-        html += '<input type="date" id="startDate" class="da-date-input">';
-        html += '<span class="da-date-separator">至</span>';
-        html += '<input type="date" id="endDate" class="da-date-input">';
+        // 所有内容放在同一行
+        html += '<div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;">';
+
+        // 日期范围
+        html += '<div class="da-filter-item" style="width: 280px;">';
+        html += '<label style="font-size:0.85rem;color:#64748b;font-weight:500;">日期范围</label>';
+        html += '<div style="display:flex;align-items:center;gap:8px;">';
+        html += '<input type="date" id="startDate" class="da-filter-input">';
+        html += '<span style="color:#94a3b8;font-size:0.85rem;">至</span>';
+        html += '<input type="date" id="endDate" class="da-filter-input">';
         html += '</div>';
         html += '</div>';
 
-        html += '<div class="da-query-btn-group">';
-        html += '<label class="da-query-label">&nbsp;</label>';
-        html += '<div class="da-query-actions">';
-        html += '<div class="da-dropdown-wrapper">';
-        html += '<button type="button" class="da-btn-outline" id="daDateDropdownBtn">⚡ 快捷选择 ▾</button>';
-        html += '<ul class="da-dropdown-menu" id="daDateDropdown" style="display:none;">';
-        html += '<li><a href="#" onclick="DailyAnalysis.setDateRange(\'today\');$(\'#daDateDropdown\').hide();return false;">📅 今天</a></li>';
-        html += '<li><a href="#" onclick="DailyAnalysis.setDateRange(\'yesterday\');$(\'#daDateDropdown\').hide();return false;">📅 昨天</a></li>';
-        html += '<li><a href="#" onclick="DailyAnalysis.setDateRange(\'thisweek\');$(\'#daDateDropdown\').hide();return false;">📆 本周</a></li>';
-        html += '<li><a href="#" onclick="DailyAnalysis.setDateRange(\'lastweek\');$(\'#daDateDropdown\').hide();return false;">📆 上周</a></li>';
+        // 快捷选择
+        html += '<div style="position:relative;">';
+        html += '<button type="button" class="da-btn-outline" id="daDateDropdownBtn" style="height:38px;padding:0 14px;font-size:0.85rem;border-radius:10px;">⚡ 快捷选择 ▼</button>';
+        html += '<ul class="da-dropdown-menu" id="daDateDropdown" style="display:none;position:absolute;top:100%;left:0;z-index:1000;background:white;list-style:none;margin:4px 0 0 0;">';
+        html += '<li><a href="#" onclick="DailyAnalysis.setDateRange(\'today\');$(\'#daDateDropdown\').hide();return false;" style="display:block;text-decoration:none;">📅 今天</a></li>';
+        html += '<li><a href="#" onclick="DailyAnalysis.setDateRange(\'yesterday\');$(\'#daDateDropdown\').hide();return false;" style="display:block;text-decoration:none;">📅 昨天</a></li>';
+        html += '<li><a href="#" onclick="DailyAnalysis.setDateRange(\'thisweek\');$(\'#daDateDropdown\').hide();return false;" style="display:block;text-decoration:none;">📆 本周</a></li>';
+        html += '<li><a href="#" onclick="DailyAnalysis.setDateRange(\'lastweek\');$(\'#daDateDropdown\').hide();return false;" style="display:block;text-decoration:none;">📆 上周</a></li>';
         html += '<li style="height:1px;background:#e2e8f0;margin:4px 0;"></li>';
-        html += '<li><a href="#" onclick="DailyAnalysis.setDateRange(\'thismonth\');$(\'#daDateDropdown\').hide();return false;">🗓️ 本月</a></li>';
-        html += '<li><a href="#" onclick="DailyAnalysis.setDateRange(\'lastmonth\');$(\'#daDateDropdown\').hide();return false;">🗓️ 上月</a></li>';
+        html += '<li><a href="#" onclick="DailyAnalysis.setDateRange(\'thismonth\');$(\'#daDateDropdown\').hide();return false;" style="display:block;text-decoration:none;">🗓️ 本月</a></li>';
+        html += '<li><a href="#" onclick="DailyAnalysis.setDateRange(\'lastmonth\');$(\'#daDateDropdown\').hide();return false;" style="display:block;text-decoration:none;">🗓️ 上月</a></li>';
         html += '</ul>';
         html += '</div>';
-        html += '<button class="da-btn-primary" onclick="DailyAnalysis.runDailyAnalysis()">🔍 查询统计</button>';
-        html += '<button class="da-btn-secondary" onclick="DailyAnalysis.clearAllFilters()">✖ 清除筛选</button>';
-        html += '</div>';
+
+        // 分隔线
+        html += '<div style="width:1px;height:44px;background:#e2e8f0;"></div>';
+
+        // 动态筛选条件（和其他内容放同一行）
+        html += '<div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;" id="dynamicFilters">';
         html += '</div>';
 
+        // 分隔线
+        html += '<div style="width:1px;height:44px;background:#e2e8f0;"></div>';
+
+        // 查询 + 清除按钮（放在最后）
+        html += '<div style="display:flex;gap:8px;">';
+        html += '<button class="da-btn-primary" onclick="DailyAnalysis.runDailyAnalysis()" style="height:38px;padding:0 20px;font-size:0.85rem;border-radius:10px;">🔍 查询统计</button>';
+        html += '<button class="da-btn-secondary" onclick="DailyAnalysis.clearAllFilters()" style="height:38px;padding:0 20px;font-size:0.85rem;border-radius:10px;">✖ 清除筛选</button>';
         html += '</div>';
 
-        // 第二行：动态筛选条件
-        html += '<div class="da-filter-section" id="dynamicFilters">';
         html += '</div>';
 
         html += '</div>';
@@ -1138,11 +1030,11 @@ var DailyAnalysis = (function() {
 
         // ===== 分析结果区域 =====
         html += '<div class="da-result-card">';
-        html += '<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #e2e8f0;">';
-        html += '<h5 style="margin:0;font-size:1.15rem;font-weight:700;color:#1e293b;">📋 统计分析结果</h5>';
+        html += '<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;">';
+        html += '<h5 style="margin:0;">📋 统计分析结果</h5>';
         html += '<div class="da-sub-btn-group">';
         html += '<button class="da-sub-btn" onclick="DailyAnalysis.runAnalysis(\'department\')">🏥 科室统计</button>';
-        html += '<button class="da-sub-btn" onclick="DailyAnalysis.runAnalysis(\'doctor\')">👨‍⚕️ 医生统计</button>';
+        html += '<button class="da-sub-btn" onclick="DailyAnalysis.runAnalysis(\'doctor\')">👨⚕️ 医生统计</button>';
         html += '<button class="da-sub-btn" onclick="DailyAnalysis.runAnalysis(\'category\')">🔬 检查类型</button>';
         html += '</div>';
         html += '</div>';
