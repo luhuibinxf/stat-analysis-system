@@ -638,9 +638,9 @@ var DailyAnalysis = (function() {
         var pageStyle = `
         <style>
         .da-page {
-            width: 96%;
+            width: 100%;
             max-width: none;
-            margin: 0 auto;
+            margin: 0;
             padding: 16px;
             animation: fadeIn 0.4s ease-out;
         }
