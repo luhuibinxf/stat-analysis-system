@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
-    <script src="js/dailyAnalysis.js"></script>
+    <script src="js/dailyAnalysis.js?v=1.0.11"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -49,33 +49,169 @@
         }
 
         .navbar {
-            background: rgba(15, 23, 42, 0.85) !important;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 0.75rem 1rem;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 30%, #0f172a 70%, #1e293b 100%) !important;
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.5),
+                0 0 80px rgba(96, 165, 250, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(96, 165, 250, 0.15);
+            padding: 1rem 2rem;
             z-index: 1030;
+            position: relative;
+            overflow: hidden;
+            min-height: 65px;
         }
 
-        .navbar-brand {
+        .navbar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, 
+                #1e1b4b 0%, 
+                #3b82f6 20%, 
+                #06b6d4 40%, 
+                #10b981 60%, 
+                #3b82f6 80%, 
+                #1e1b4b 100%);
+            background-size: 200% 100%;
+            animation: shimmerLine 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmerLine {
+            0%, 100% { background-position: 200% 0; }
+            50% { background-position: -200% 0; }
+        }
+
+        .breadcrumb-nav {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .btn-back {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(96, 165, 250, 0.15);
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            color: #60a5fa;
+            border-radius: 10px;
+            padding: 8px 16px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .btn-back:hover {
+            background: rgba(96, 165, 250, 0.25);
+            border-color: rgba(96, 165, 250, 0.5);
+            color: #93c5fd;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(96, 165, 250, 0.25);
+        }
+
+        .back-icon {
+            font-size: 1.2rem;
             font-weight: 700;
-            font-size: 1.35rem;
-            background: linear-gradient(135deg, #60a5fa, #34d399);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            letter-spacing: 0.5px;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .breadcrumb-item {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.95rem;
+            font-weight: 500;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .breadcrumb-item:hover {
+            color: #93c5fd;
+            background: rgba(96, 165, 250, 0.1);
+            cursor: pointer;
+        }
+
+        .breadcrumb-item.active {
+            color: #60a5fa;
+            font-weight: 700;
+            background: rgba(96, 165, 250, 0.15);
+        }
+
+        .breadcrumb-separator {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 1.2rem;
+            font-weight: 300;
+        }
+
+        .navbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         .navbar-text {
-            color: rgba(255, 255, 255, 0.7) !important;
-            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.85) !important;
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
         }
 
         .navbar-text strong {
             color: #60a5fa;
+            font-weight: 700;
+            text-shadow: 0 0 20px rgba(96, 165, 250, 0.5);
+        }
+
+        .navbar .btn-outline-danger {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.08) 100%);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #f87171;
+            border-radius: 10px;
+            padding: 8px 20px;
             font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            font-size: 0.95rem;
+        }
+
+        .navbar .btn-outline-danger::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .navbar .btn-outline-danger:hover {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(239, 68, 68, 0.15) 100%);
+            border-color: rgba(239, 68, 68, 0.6);
+            color: #fecaca;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.25);
+        }
+
+        .navbar .btn-outline-danger:hover::before {
+            left: 100%;
         }
 
         .card {
@@ -478,16 +614,95 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: white;
             backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 10px 24px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.18);
+            border-color: rgba(255, 255, 255, 0.3);
             color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         }
 
-        .container {
+        #panelTitle {
+            font-size: 1.75rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #60a5fa 0%, #34d399 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 1px;
+            text-shadow: 0 4px 20px rgba(96, 165, 250, 0.3);
+            position: relative;
+            padding: 16px 32px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        #panelTitle::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #60a5fa, #34d399);
+            border-radius: 16px 16px 0 0;
+        }
+
+        .container, .container-fluid {
             position: relative;
             z-index: 1;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        #configPanel {
+            padding: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        #panelContent {
+            width: 100% !important;
+            padding: 0 !important;
+        }
+
+        body .container {
+            margin: 0 !important;
+        }
+
+        html, body {
+            width: 100%;
+            overflow-x: hidden;
+        }
+
+        .row {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+
+        [class*="col-"] {
+            padding-left: 8px !important;
+            padding-right: 8px !important;
+        }
+
+        .da-page {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            margin: 0 !important;
+            padding: 16px !important;
+            box-sizing: border-box !important;
         }
 
         .min-vh-100 {
@@ -535,12 +750,22 @@
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-light">
+    <nav class="navbar navbar-expand-lg">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">统计分析系统</a>
-            <div class="d-flex">
-                <span class="navbar-text me-3">当前用户: <strong id="currentUser">未登录</strong></span>
-                <button class="btn btn-outline-danger btn-sm" onclick="logout()">退出登录</button>
+            <div class="breadcrumb-nav">
+                <button class="btn-back" onclick="goBack()">
+                    <span class="back-icon">←</span>
+                    <span>返回</span>
+                </button>
+                <div class="breadcrumb">
+                    <span class="breadcrumb-item">统计分析</span>
+                    <span class="breadcrumb-separator">›</span>
+                    <span class="breadcrumb-item active">每日分析</span>
+                </div>
+            </div>
+            <div class="navbar-right">
+                <span class="navbar-text">当前用户: <strong id="currentUser">未登录</strong></span>
+                <button class="btn btn-outline-danger ms-3" onclick="logout()">退出登录</button>
             </div>
         </div>
     </nav>
@@ -600,7 +825,7 @@
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <div class="card menu-card p-3 text-center" onclick="DailyAnalysis.init()">
+                    <div class="card menu-card p-3 text-center" onclick="showDailyAnalysis()">
                         <div class="menu-icon">📊</div>
                         <h4>检查每日分析</h4>
                         <p class="text-muted">检查统计查询</p>
@@ -711,6 +936,11 @@
             });
             
             return false;
+        }
+
+        function goBack() {
+            $('#dailyAnalysisPanel').hide();
+            $('#mainMenu').show();
         }
 
         function logout() {
@@ -856,6 +1086,14 @@
             $('#configPanel').show();
             $('#panelTitle').text('参数配置');
             $('#panelContent').html('<p class="text-white">参数配置功能开发中...</p>');
+        }
+
+        function showDailyAnalysis() {
+            history.pushState({page: 'dailyAnalysis'}, '检查每日分析', '#daily-analysis');
+            $('#mainMenu').hide();
+            $('#configPanel').show();
+            $('#panelTitle').text('检查每日分析');
+            DailyAnalysis.init();
         }
 
         function showComplexConfig() {

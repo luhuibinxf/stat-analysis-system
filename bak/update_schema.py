@@ -46,10 +46,16 @@ def generate_patient_type_mapping_section():
 | 3 | 急诊 | 急诊患者 |
 | 4 | 体检 | 体检患者 |
 | 138138 | 门诊 | HIS标准编码 |
-| 138139 | 住院 | HIS标准编码 |
-| 138140 | 急诊 | HIS标准编码 |
-| 138141 | 体检 | HIS标准编码 |
-| 138142 | 住院部 | HIS标准编码 |
+| 138139 | 急诊 | HIS标准编码 |
+| 138140 | 体检 | HIS标准编码 |
+| 145235 | 住院 | HIS标准编码 |
+
+### NEG_POS_CODE 阴阳性编码映射
+
+| 编码 | 中文名称 | 说明 |
+|------|----------|------|
+| 383927 | 阳性 | 检查结果阳性 |
+| 383926 | 阴性 | 检查结果阴性 |
 
 ### 字典表查询方式
 
@@ -72,6 +78,14 @@ ORDER BY d.nValue;
 **映射表**: Pacs_SysDict  
 **默认值**: 无  
 
+### EXAM_REPORT表中NEG_POS_CODE字段说明
+
+**字段名**: NEG_POS_CODE  
+**类型**: VARCHAR(32)  
+**说明**: 阴阳性标记  
+**映射表**: Pacs_SysDict  
+**默认值**: 无  
+
 ### 常用查询示例
 
 ```sql
@@ -83,9 +97,9 @@ SELECT
         WHEN '3' THEN '急诊'
         WHEN '4' THEN '体检'
         WHEN '138138' THEN '门诊'
-        WHEN '138139' THEN '住院'
-        WHEN '138140' THEN '急诊'
-        WHEN '138141' THEN '体检'
+        WHEN '138139' THEN '急诊'
+        WHEN '138140' THEN '体检'
+        WHEN '145235' THEN '住院'
         ELSE ENCOUNTER_TYPE_NO 
     END AS 就诊类型,
     COUNT(*) AS 数量
@@ -131,8 +145,9 @@ def main():
         print("1. 添加了ENCOUNTER_TYPE_NO病人类型编码映射表")
         print("2. 添加了官方映射关系（1=门诊, 2=住院等）")
         print("3. 添加了HIS标准编码映射（138138=门诊等）")
-        print("4. 添加了字典表查询方式")
-        print("5. 添加了常用查询示例")
+        print("4. 添加了NEG_POS_CODE阴阳性编码映射（383927=阳性, 383926=阴性）")
+        print("5. 添加了字典表查询方式")
+        print("6. 添加了常用查询示例")
     else:
         print("更新失败")
 

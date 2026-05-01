@@ -26,7 +26,7 @@ namespace DbProcedureCaller.Services
             string groupBy = "",
             string sortBy = "任务数量",
             string sortOrder = "DESC",
-            int pageSize = 0,
+            int pageSize = 100,
             int pageIndex = 1)
         {
             DataTable dt = new DataTable();
@@ -47,9 +47,12 @@ namespace DbProcedureCaller.Services
                     using (SqlCommand cmd = new SqlCommand())
                     {
                         cmd.Connection = conn;
+                        cmd.CommandTimeout = 120;
                         int paramIndex = 0;
                         StringBuilder sqlBuilder = BuildQuerySql(startDate, endDate, system, reporter, reviewer, technician, department, category, patientType, resultStatus, groupBy, sortBy, sortOrder, pageSize, pageIndex, cmd, ref paramIndex);
                         cmd.CommandText = sqlBuilder.ToString();
+
+                        LogHelper.LogInfo("执行SQL查询: " + cmd.CommandText.Substring(0, Math.Min(500, cmd.CommandText.Length)));
 
                         using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
                         {
@@ -79,39 +82,290 @@ namespace DbProcedureCaller.Services
                 string connectionString = ConnectionStrings.GetConnectionString();
                 if (string.IsNullOrEmpty(connectionString))
                 {
-                    LogHelper.LogError("数据库连接字符串为空，无法获取选项数据");
-                    return "{\"success\": false, \"error\": \"数据库连接未配置\", \"data\": {\"systems\": [], \"reporters\": [], \"reviewers\": [], \"technicians\": [], \"departments\": [], \"categories\": [], \"patientTypes\": [], \"resultStatus\": []}}";
+                    LogHelper.LogError("数据库连接字符串为空");
+                    return "{\"success\": false, \"error\": \"请先配置数据库连接\"}";
                 }
 
                 using (SqlConnection conn = DatabaseConnection.GetConnection(connectionString))
                 {
-                    string systemFilter = string.IsNullOrEmpty(system) ? "" : " AND t.SYSTEM_SOURCE_NO = '" + system.Replace("'", "''") + "'";
-                    string systemFilterSimple = string.IsNullOrEmpty(system) ? "" : " AND SYSTEM_SOURCE_NO = '" + system.Replace("'", "''") + "'";
-                    
-                    var result = new
+                    var systems = new List<Dictionary<string, string>>();
+                    var reporters = new List<string>();
+                    var reviewers = new List<string>();
+                    var technicians = new List<string>();
+                    var departments = new List<string>();
+                    var categories = new List<string>();
+                    var patientTypes = new List<Dictionary<string, string>>();
+                    var resultStatus = new List<Dictionary<string, string>>();
+
+                    var systemMap = new Dictionary<string, string>
                     {
-                        success = true,
-                        data = new
-                        {
-                            systems = GetDataList(conn, @"SELECT DISTINCT SYSTEM_SOURCE_NO as code, SYSTEM_SOURCE_NO as name FROM EXAM_TASK WHERE SYSTEM_SOURCE_NO IS NOT NULL ORDER BY SYSTEM_SOURCE_NO"),
-                            reporters = GetDataList(conn, @"SELECT DISTINCT r.REPORTER_NAME as code, r.REPORTER_NAME as name FROM EXAM_REPORT r INNER JOIN EXAM_TASK t ON r.EXAM_TASK_ID = t.EXAM_TASK_ID WHERE r.REPORTER_NAME IS NOT NULL" + systemFilter + " ORDER BY r.REPORTER_NAME"),
-                            reviewers = GetDataList(conn, @"SELECT DISTINCT r.REVIEWER_NAME as code, r.REVIEWER_NAME as name FROM EXAM_REPORT r INNER JOIN EXAM_TASK t ON r.EXAM_TASK_ID = t.EXAM_TASK_ID WHERE r.REVIEWER_NAME IS NOT NULL" + systemFilter + " ORDER BY r.REVIEWER_NAME"),
-                            technicians = GetDataList(conn, @"SELECT DISTINCT TECHNICIAN_NAME as code, TECHNICIAN_NAME as name FROM EXAM_TASK WHERE TECHNICIAN_NAME IS NOT NULL" + systemFilterSimple + " ORDER BY TECHNICIAN_NAME"),
-                            departments = GetDataList(conn, @"SELECT DISTINCT EXEC_DEPT_NAME as code, EXEC_DEPT_NAME as name FROM EXAM_TASK WHERE EXEC_DEPT_NAME IS NOT NULL" + systemFilterSimple + " ORDER BY EXEC_DEPT_NAME"),
-                            categories = GetDataList(conn, @"SELECT DISTINCT EXAM_CATEGORY_NAME as code, EXAM_CATEGORY_NAME as name FROM EXAM_TASK WHERE EXAM_CATEGORY_NAME IS NOT NULL" + systemFilterSimple + " ORDER BY EXAM_CATEGORY_NAME"),
-                            patientTypes = GetPatientTypesWithMapping(conn, system),
-                            resultStatus = GetResultStatusOptions(conn)
-                        }
+                        { "UIS", "超声" },
+                        { "RIS", "放射" },
+                        { "EIS", "内镜" },
+                        { "PIS", "病理" },
+                        { "NMS", "核医学" }
                     };
 
-                    return Newtonsoft.Json.JsonConvert.SerializeObject(result);
+                    string sql = @"SELECT DISTINCT SYSTEM_SOURCE_NO as code 
+                                   FROM EXAM_TASK 
+                                   WHERE SYSTEM_SOURCE_NO IS NOT NULL 
+                                   ORDER BY SYSTEM_SOURCE_NO";
+                    using (SqlCommand cmd = new SqlCommand(sql, conn))
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            string code = reader["code"]?.ToString() ?? "";
+                            string name = systemMap.ContainsKey(code) ? systemMap[code] : code;
+                            systems.Add(new Dictionary<string, string>
+                            {
+                                { "code", code },
+                                { "name", name }
+                            });
+                        }
+                    }
+
+                    sql = @"SELECT DISTINCT r.REPORTER_NAME as name 
+                            FROM EXAM_REPORT r 
+                            INNER JOIN EXAM_TASK t ON r.EXAM_TASK_ID = t.EXAM_TASK_ID 
+                            WHERE r.REPORTER_NAME IS NOT NULL ";
+                    if (!string.IsNullOrEmpty(system))
+                    {
+                        sql += " AND t.SYSTEM_SOURCE_NO = @System ";
+                    }
+                    sql += " ORDER BY r.REPORTER_NAME";
+                    using (SqlCommand cmd = new SqlCommand(sql, conn))
+                    {
+                        if (!string.IsNullOrEmpty(system))
+                        {
+                            cmd.Parameters.AddWithValue("@System", system);
+                        }
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string name = reader["name"]?.ToString() ?? "";
+                                if (!string.IsNullOrEmpty(name))
+                                {
+                                    reporters.Add(name);
+                                }
+                            }
+                        }
+                    }
+
+                    sql = @"SELECT DISTINCT r.REVIEWER_NAME as name 
+                            FROM EXAM_REPORT r 
+                            INNER JOIN EXAM_TASK t ON r.EXAM_TASK_ID = t.EXAM_TASK_ID 
+                            WHERE r.REVIEWER_NAME IS NOT NULL ";
+                    if (!string.IsNullOrEmpty(system))
+                    {
+                        sql += " AND t.SYSTEM_SOURCE_NO = @System ";
+                    }
+                    sql += " ORDER BY r.REVIEWER_NAME";
+                    using (SqlCommand cmd = new SqlCommand(sql, conn))
+                    {
+                        if (!string.IsNullOrEmpty(system))
+                        {
+                            cmd.Parameters.AddWithValue("@System", system);
+                        }
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string name = reader["name"]?.ToString() ?? "";
+                                if (!string.IsNullOrEmpty(name))
+                                {
+                                    reviewers.Add(name);
+                                }
+                            }
+                        }
+                    }
+
+                    sql = @"SELECT DISTINCT t.TECHNICIAN_NAME as name 
+                            FROM EXAM_TASK t 
+                            WHERE t.TECHNICIAN_NAME IS NOT NULL ";
+                    if (!string.IsNullOrEmpty(system))
+                    {
+                        sql += " AND t.SYSTEM_SOURCE_NO = @System ";
+                    }
+                    sql += " ORDER BY t.TECHNICIAN_NAME";
+                    using (SqlCommand cmd = new SqlCommand(sql, conn))
+                    {
+                        if (!string.IsNullOrEmpty(system))
+                        {
+                            cmd.Parameters.AddWithValue("@System", system);
+                        }
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string name = reader["name"]?.ToString() ?? "";
+                                if (!string.IsNullOrEmpty(name))
+                                {
+                                    technicians.Add(name);
+                                }
+                            }
+                        }
+                    }
+
+                    sql = @"SELECT DISTINCT t.EXEC_DEPT_NAME as name 
+                            FROM EXAM_TASK t 
+                            WHERE t.EXEC_DEPT_NAME IS NOT NULL ";
+                    if (!string.IsNullOrEmpty(system))
+                    {
+                        sql += " AND t.SYSTEM_SOURCE_NO = @System ";
+                    }
+                    sql += " ORDER BY t.EXEC_DEPT_NAME";
+                    using (SqlCommand cmd = new SqlCommand(sql, conn))
+                    {
+                        if (!string.IsNullOrEmpty(system))
+                        {
+                            cmd.Parameters.AddWithValue("@System", system);
+                        }
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string name = reader["name"]?.ToString() ?? "";
+                                if (!string.IsNullOrEmpty(name))
+                                {
+                                    departments.Add(name);
+                                }
+                            }
+                        }
+                    }
+
+                    sql = @"SELECT DISTINCT t.EXAM_CATEGORY_NAME as name 
+                            FROM EXAM_TASK t 
+                            WHERE t.EXAM_CATEGORY_NAME IS NOT NULL ";
+                    if (!string.IsNullOrEmpty(system))
+                    {
+                        sql += " AND t.SYSTEM_SOURCE_NO = @System ";
+                    }
+                    sql += " ORDER BY t.EXAM_CATEGORY_NAME";
+                    using (SqlCommand cmd = new SqlCommand(sql, conn))
+                    {
+                        if (!string.IsNullOrEmpty(system))
+                        {
+                            cmd.Parameters.AddWithValue("@System", system);
+                        }
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string name = reader["name"]?.ToString() ?? "";
+                                if (!string.IsNullOrEmpty(name))
+                                {
+                                    categories.Add(name);
+                                }
+                            }
+                        }
+                    }
+
+                    sql = @"SELECT DISTINCT t.ENCOUNTER_TYPE_NO as code, 
+                                  ISNULL(d.cValue, t.ENCOUNTER_TYPE_NO) as name 
+                           FROM EXAM_TASK t 
+                           LEFT JOIN Pacs_SysDict d ON d.TableName='EXAM_TASK' AND d.FieldName='ENCOUNTER_TYPE_NO' AND d.nValue=CAST(t.ENCOUNTER_TYPE_NO AS INT) 
+                           WHERE t.ENCOUNTER_TYPE_NO IS NOT NULL AND t.ENCOUNTER_TYPE_NO != '' ";
+                    if (!string.IsNullOrEmpty(system))
+                    {
+                        sql += " AND t.SYSTEM_SOURCE_NO = @System ";
+                    }
+                    sql += " ORDER BY t.ENCOUNTER_TYPE_NO";
+                    using (SqlCommand cmd = new SqlCommand(sql, conn))
+                    {
+                        if (!string.IsNullOrEmpty(system))
+                        {
+                            cmd.Parameters.AddWithValue("@System", system);
+                        }
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string code = reader["code"]?.ToString() ?? "";
+                                string name = reader["name"]?.ToString() ?? "";
+                                if (name == code || string.IsNullOrEmpty(name))
+                                {
+                                    name = GetDefaultPatientTypeName(code);
+                                }
+                                if (!string.IsNullOrEmpty(code))
+                                {
+                                    patientTypes.Add(new Dictionary<string, string>
+                                    {
+                                        { "code", code },
+                                        { "name", name }
+                                    });
+                                }
+                            }
+                        }
+                    }
+
+                    sql = @"SELECT DISTINCT r.NEG_POS_CODE as code 
+                            FROM EXAM_REPORT r 
+                            WHERE r.NEG_POS_CODE IS NOT NULL AND r.NEG_POS_CODE != '' 
+                            ORDER BY r.NEG_POS_CODE";
+                    using (SqlCommand cmd = new SqlCommand(sql, conn))
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        var statusSet = new HashSet<string>();
+                        while (reader.Read())
+                        {
+                            string code = reader["code"]?.ToString()?.Trim() ?? "";
+                            string name = MapNegPosCode(code);
+                            if (!string.IsNullOrEmpty(code) && !statusSet.Contains(name))
+                            {
+                                statusSet.Add(name);
+                                resultStatus.Add(new Dictionary<string, string>
+                                {
+                                    { "code", code },
+                                    { "name", name }
+                                });
+                            }
+                        }
+                    }
+
+                    return string.Format("{{\"success\":true,\"data\":{{\"systems\":{0},\"reporters\":{1},\"reviewers\":{2},\"technicians\":{3},\"departments\":{4},\"categories\":{5},\"patientTypes\":{6},\"resultStatus\":{7}}}}}",
+                        Newtonsoft.Json.JsonConvert.SerializeObject(systems),
+                        Newtonsoft.Json.JsonConvert.SerializeObject(reporters),
+                        Newtonsoft.Json.JsonConvert.SerializeObject(reviewers),
+                        Newtonsoft.Json.JsonConvert.SerializeObject(technicians),
+                        Newtonsoft.Json.JsonConvert.SerializeObject(departments),
+                        Newtonsoft.Json.JsonConvert.SerializeObject(categories),
+                        Newtonsoft.Json.JsonConvert.SerializeObject(patientTypes),
+                        Newtonsoft.Json.JsonConvert.SerializeObject(resultStatus));
                 }
             }
             catch (Exception ex)
             {
                 LogHelper.LogException(ex, "获取所有下拉框选项失败");
-                return "{\"success\": false, \"error\": \"" + ex.Message.Replace("\"", "'") + "\", \"data\": {\"systems\": [], \"reporters\": [], \"reviewers\": [], \"technicians\": [], \"departments\": [], \"categories\": [], \"patientTypes\": [], \"resultStatus\": []}}";
+                return "{\"success\": false, \"error\": \"" + ex.Message.Replace("\"", "'") + "\"}";
             }
+        }
+
+        private List<Dictionary<string, string>> GetDataListWithTimeout(SqlConnection conn, string sql, int timeoutSeconds)
+        {
+            var list = new List<Dictionary<string, string>>();
+            using (SqlCommand cmd = new SqlCommand(sql, conn))
+            {
+                cmd.CommandTimeout = timeoutSeconds;
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        string code = reader["code"]?.ToString()?.Trim() ?? "";
+                        string name = reader["name"]?.ToString()?.Trim() ?? "";
+                        if (!string.IsNullOrEmpty(code) && !string.IsNullOrEmpty(name))
+                        {
+                            list.Add(new Dictionary<string, string>
+                            {
+                                { "code", code },
+                                { "name", name }
+                            });
+                        }
+                    }
+                }
+            }
+            return list;
         }
 
         private List<Dictionary<string, string>> GetPatientTypesWithMapping(SqlConnection conn, string system)
@@ -121,8 +375,8 @@ namespace DbProcedureCaller.Services
             {
                 string sql = @"SELECT DISTINCT t.ENCOUNTER_TYPE_NO as code, 
                               ISNULL(d.cValue, t.ENCOUNTER_TYPE_NO) as name
-                              FROM EXAM_TASK t
-                              LEFT JOIN Pacs_SysDict d ON 
+                              FROM EXAM_TASK t WITH(NOLOCK)
+                              LEFT JOIN Pacs_SysDict d WITH(NOLOCK) ON 
                                 d.TableName='EXAM_TASK' AND d.FieldName='ENCOUNTER_TYPE_NO' AND
                                 (CAST(d.nValue AS VARCHAR(50)) = t.ENCOUNTER_TYPE_NO)
                               WHERE t.ENCOUNTER_TYPE_NO IS NOT NULL AND t.ENCOUNTER_TYPE_NO != ''
@@ -142,10 +396,6 @@ namespace DbProcedureCaller.Services
                             {
                                 if (name == code || string.IsNullOrEmpty(name))
                                 {
-                                    name = GetPatientTypeNameFromDict(conn, code);
-                                }
-                                if (name == code || string.IsNullOrEmpty(name))
-                                {
                                     name = GetDefaultPatientTypeName(code);
                                 }
                                 list.Add(new Dictionary<string, string>
@@ -160,32 +410,21 @@ namespace DbProcedureCaller.Services
 
                 if (list.Count == 0)
                 {
-                    list = GetDataList(conn, @"SELECT DISTINCT ENCOUNTER_TYPE_NO as code, ENCOUNTER_TYPE_NO as name FROM EXAM_TASK WHERE ENCOUNTER_TYPE_NO IS NOT NULL ORDER BY ENCOUNTER_TYPE_NO");
+                    list = GetDataList(conn, @"SELECT DISTINCT ENCOUNTER_TYPE_NO as code, ENCOUNTER_TYPE_NO as name FROM EXAM_TASK WITH(NOLOCK) WHERE ENCOUNTER_TYPE_NO IS NOT NULL AND ENCOUNTER_TYPE_NO != '' ORDER BY ENCOUNTER_TYPE_NO");
                     foreach (var item in list)
                     {
-                        string name = GetPatientTypeNameFromDict(conn, item["code"]);
-                        if (name == item["code"] || string.IsNullOrEmpty(name))
-                        {
-                            name = GetDefaultPatientTypeName(item["code"]);
-                        }
-                        item["name"] = name;
+                        item["name"] = GetDefaultPatientTypeName(item["code"]);
                     }
                 }
             }
             catch (Exception ex)
             {
-                LogHelper.LogException(ex, "获取病人类型（带映射）失败");
-                list = GetDataList(conn, @"SELECT DISTINCT ENCOUNTER_TYPE_NO as code, ENCOUNTER_TYPE_NO as name FROM EXAM_TASK WHERE ENCOUNTER_TYPE_NO IS NOT NULL ORDER BY ENCOUNTER_TYPE_NO");
+                LogHelper.LogException(ex, "获取病人类型失败");
+                list = GetDataList(conn, @"SELECT DISTINCT ENCOUNTER_TYPE_NO as code, ENCOUNTER_TYPE_NO as name FROM EXAM_TASK WITH(NOLOCK) WHERE ENCOUNTER_TYPE_NO IS NOT NULL AND ENCOUNTER_TYPE_NO != '' ORDER BY ENCOUNTER_TYPE_NO");
                 foreach (var item in list)
                 {
                     item["name"] = GetDefaultPatientTypeName(item["code"]);
                 }
-            }
-            
-            LogHelper.LogInfo($"获取病人类型完成，共 {list.Count} 条数据");
-            foreach (var item in list)
-            {
-                LogHelper.LogInfo($"病人类型: code={item["code"]}, name={item["name"]}");
             }
             
             return list;
@@ -217,10 +456,9 @@ namespace DbProcedureCaller.Services
                 { "3", "急诊" },
                 { "4", "体检" },
                 { "138138", "门诊" },
-                { "138139", "住院" },
-                { "138140", "急诊" },
-                { "138141", "体检" },
-                { "138142", "住院部" },
+                { "138139", "急诊" },
+                { "138140", "体检" },
+                { "145235", "住院" },
                 { "OPD", "门诊" },
                 { "IPD", "住院" },
                 { "EMER", "急诊" },
@@ -245,11 +483,16 @@ namespace DbProcedureCaller.Services
             {
                 while (reader.Read())
                 {
-                    list.Add(new Dictionary<string, string>
+                    string code = reader["code"]?.ToString()?.Trim() ?? "";
+                    string name = reader["name"]?.ToString()?.Trim() ?? "";
+                    if (!string.IsNullOrEmpty(code) && !string.IsNullOrEmpty(name))
                     {
-                        { "code", reader["code"]?.ToString() ?? "" },
-                        { "name", reader["name"]?.ToString() ?? "" }
-                    });
+                        list.Add(new Dictionary<string, string>
+                        {
+                            { "code", code },
+                            { "name", name }
+                        });
+                    }
                 }
             }
             return list;
@@ -262,8 +505,8 @@ namespace DbProcedureCaller.Services
             {
                 string sql = @"SELECT DISTINCT r.NEG_POS_CODE as code, 
                               ISNULL(d.cValue, r.NEG_POS_CODE) as name
-                              FROM EXAM_REPORT r
-                              LEFT JOIN Pacs_SysDict d ON 
+                              FROM EXAM_REPORT r WITH(NOLOCK)
+                              LEFT JOIN Pacs_SysDict d WITH(NOLOCK) ON 
                                 d.TableName='EXAM_REPORT' AND d.FieldName='NEG_POS_CODE' AND 
                                 d.nValue = CASE WHEN ISNUMERIC(r.NEG_POS_CODE) = 1 THEN CAST(r.NEG_POS_CODE AS INT) ELSE 0 END
                               WHERE r.NEG_POS_CODE IS NOT NULL AND r.NEG_POS_CODE != '' 
@@ -325,10 +568,12 @@ namespace DbProcedureCaller.Services
                 case "POS":
                 case "Y":
                 case "阳性":
+                case "383927":
                     return "阳性";
                 case "N":
                 case "NEG":
                 case "阴性":
+                case "383926":
                     return "阴性";
                 default:
                     return code;
@@ -722,20 +967,43 @@ namespace DbProcedureCaller.Services
             StringBuilder sqlBuilder = new StringBuilder();
             sqlBuilder.Append(@"
                 SELECT
-                    ISNULL(t.SYSTEM_SOURCE_NO, '') AS 系统,
+                    ISNULL(CASE t.SYSTEM_SOURCE_NO 
+                        WHEN 'UIS' THEN '超声' 
+                        WHEN 'RIS' THEN '放射' 
+                        WHEN 'EIS' THEN '内镜' 
+                        WHEN 'PIS' THEN '病理'
+                        WHEN 'NMS' THEN '核医学'
+                        ELSE t.SYSTEM_SOURCE_NO 
+                    END, '') AS 系统,
                     ISNULL(r.REPORTER_NAME, '') AS 报告医生,
                     ISNULL(r.REVIEWER_NAME, '') AS 审核医生,
                     ISNULL(t.TECHNICIAN_NAME, '') AS 技师,
                     ISNULL(t.EXEC_DEPT_NAME, '') AS 执行科室,
                     ISNULL(t.EXAM_CATEGORY_NAME, '') AS 检查类型,
-                    ISNULL(t.ENCOUNTER_TYPE_NO, '') AS 病人类型,
-                    ISNULL(CASE r.NEG_POS_CODE WHEN 'P' THEN '阳性' WHEN 'N' THEN '阴性' ELSE '未知' END, '') AS 结果状态,
+                    ISNULL(CASE t.ENCOUNTER_TYPE_NO 
+                        WHEN '1' THEN '门诊' 
+                        WHEN '2' THEN '住院' 
+                        WHEN '3' THEN '急诊' 
+                        WHEN '4' THEN '体检'
+                        WHEN '138138' THEN '门诊' 
+                        WHEN '138139' THEN '急诊'
+                        WHEN '138140' THEN '体检' 
+                        WHEN '145235' THEN '住院'
+                        WHEN 'OPD' THEN '门诊' 
+                        WHEN 'IPD' THEN '住院' 
+                        WHEN 'EMER' THEN '急诊' 
+                        WHEN 'CHECKUP' THEN '体检'
+                        ELSE ISNULL(d.cValue, t.ENCOUNTER_TYPE_NO) 
+                    END, '') AS 病人类型,
+                    ISNULL(CASE r.NEG_POS_CODE WHEN '383927' THEN '阳性' WHEN '383926' THEN '阴性' WHEN 'P' THEN '阳性' WHEN 'N' THEN '阴性' WHEN 'Y' THEN '阳性' WHEN 'POS' THEN '阳性' WHEN 'NEG' THEN '阴性' ELSE '未知' END, '') AS 结果状态,
                     COUNT(*) AS 任务数量,
-                    ISNULL(SUM(CASE WHEN r.NEG_POS_CODE = 'P' THEN 1 ELSE 0 END), 0) AS 阳性数量,
-                    ISNULL(SUM(CASE WHEN r.NEG_POS_CODE = 'N' THEN 1 ELSE 0 END), 0) AS 阴性数量,
-                    ISNULL(AVG(CASE WHEN r.NEG_POS_CODE = 'P' THEN 100.0 ELSE 0 END), 0) AS 阳性率
-                FROM EXAM_TASK t
-                LEFT JOIN EXAM_REPORT r ON t.EXAM_TASK_ID = r.EXAM_TASK_ID
+                    SUM(CASE WHEN r.NEG_POS_CODE = '383927' THEN 1 ELSE 0 END) AS 阳性数量,
+                    SUM(CASE WHEN r.NEG_POS_CODE = '383926' THEN 1 ELSE 0 END) AS 阴性数量,
+                    ROUND(CASE WHEN COUNT(*) > 0 THEN SUM(CASE WHEN r.NEG_POS_CODE = '383927' THEN 1.0 ELSE 0.0 END) * 100.0 / COUNT(*) ELSE 0.0 END, 2) AS 阳性率
+                FROM EXAM_TASK t WITH(NOLOCK)
+                INNER JOIN EXAM_REPORT r WITH(NOLOCK) ON t.EXAM_TASK_ID = r.EXAM_TASK_ID
+                LEFT JOIN Pacs_SysDict d WITH(NOLOCK) ON d.TableName='EXAM_TASK' AND d.FieldName='ENCOUNTER_TYPE_NO' 
+                    AND (CAST(d.nValue AS VARCHAR(50)) = t.ENCOUNTER_TYPE_NO OR d.cValue = t.ENCOUNTER_TYPE_NO)
                 WHERE t.IS_DEL = 0");
 
             List<string> conditions = new List<string>();
@@ -772,14 +1040,35 @@ namespace DbProcedureCaller.Services
 
             sqlBuilder.Append(@"
                 GROUP BY
-                    ISNULL(t.SYSTEM_SOURCE_NO, ''),
+                    ISNULL(CASE t.SYSTEM_SOURCE_NO 
+                        WHEN 'UIS' THEN '超声' 
+                        WHEN 'RIS' THEN '放射' 
+                        WHEN 'EIS' THEN '内镜' 
+                        WHEN 'PIS' THEN '病理'
+                        WHEN 'NMS' THEN '核医学'
+                        ELSE t.SYSTEM_SOURCE_NO 
+                    END, ''),
                     ISNULL(r.REPORTER_NAME, ''),
                     ISNULL(r.REVIEWER_NAME, ''),
                     ISNULL(t.TECHNICIAN_NAME, ''),
                     ISNULL(t.EXEC_DEPT_NAME, ''),
                     ISNULL(t.EXAM_CATEGORY_NAME, ''),
-                    ISNULL(t.ENCOUNTER_TYPE_NO, ''),
-                    ISNULL(CASE r.NEG_POS_CODE WHEN 'P' THEN '阳性' WHEN 'N' THEN '阴性' ELSE '未知' END, '')");
+                    ISNULL(CASE t.ENCOUNTER_TYPE_NO 
+                        WHEN '1' THEN '门诊' 
+                        WHEN '2' THEN '住院' 
+                        WHEN '3' THEN '急诊' 
+                        WHEN '4' THEN '体检'
+                        WHEN '138138' THEN '门诊' 
+                        WHEN '138139' THEN '急诊'
+                        WHEN '138140' THEN '体检' 
+                        WHEN '145235' THEN '住院'
+                        WHEN 'OPD' THEN '门诊' 
+                        WHEN 'IPD' THEN '住院' 
+                        WHEN 'EMER' THEN '急诊' 
+                        WHEN 'CHECKUP' THEN '体检'
+                        ELSE ISNULL(d.cValue, t.ENCOUNTER_TYPE_NO) 
+                    END, ''),
+                    ISNULL(CASE r.NEG_POS_CODE WHEN '383927' THEN '阳性' WHEN '383926' THEN '阴性' WHEN 'P' THEN '阳性' WHEN 'N' THEN '阴性' WHEN 'Y' THEN '阳性' WHEN 'POS' THEN '阳性' WHEN 'NEG' THEN '阴性' ELSE '未知' END, '')");
 
             string validSortBy = ValidateSortField(sortBy);
             string validSortOrder = sortOrder.ToUpper() == "ASC" ? "ASC" : "DESC";

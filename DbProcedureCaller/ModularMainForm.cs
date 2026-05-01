@@ -130,14 +130,6 @@ namespace DbProcedureCaller
             }
         }
 
-        private void HttpServerStarted()
-        {
-            string localIP = GetLocalIP();
-            string message = string.Format("统计服务器已启动！本地访问：http://localhost:{0}/, 网络访问：http://{1}:{0}/", serverPort, localIP);
-            LogHelper.LogInfo(message);
-            UpdateStatusLabel(message);
-        }
-
         private void StartHttpServer()
         {
             try
@@ -155,71 +147,94 @@ namespace DbProcedureCaller
         private void StartHttpServerWithRetry()
         {
             int port = int.Parse(serverPort);
-            int maxRetries = 2;
-            bool started = false;
+            
+            LogHelper.LogInfo("开始启动HTTP服务器...");
+            LogHelper.LogInfo("使用端口: " + serverPort);
+            UpdateStatusLabel("开始启动HTTP服务器...");
+            UpdateStatusLabel("使用端口: " + serverPort);
 
-            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            httpListener = new HttpListener();
+            
+            string url1 = string.Format("http://localhost:{0}/", serverPort);
+            string url2 = string.Format("http://127.0.0.1:{0}/", serverPort);
+            string url3 = string.Format("http://*:{0}/", serverPort);
+
+            httpListener.Prefixes.Add(url1);
+            httpListener.Prefixes.Add(url2);
+            
+            bool canBindAllInterfaces = true;
+            try
             {
-                try
+                httpListener.Prefixes.Add(url3);
+            }
+            catch
+            {
+                canBindAllInterfaces = false;
+                LogHelper.LogInfo("无法绑定到所有网络接口，将仅绑定本地接口");
+            }
+
+            try
+            {
+                httpListener.Start();
+                LogHelper.LogInfo("HTTP服务器启动成功");
+                UpdateStatusLabel("HTTP服务器启动成功");
+
+                httpServerThread = new Thread(HttpServerThread);
+                httpServerThread.IsBackground = true;
+                httpServerThread.Start();
+                LogHelper.LogInfo("HTTP服务器线程已启动");
+                UpdateStatusLabel("HTTP服务器线程已启动");
+
+                HttpServerStarted(canBindAllInterfaces);
+            }
+            catch (HttpListenerException ex) when (ex.ErrorCode == 5 || ex.Message.Contains("conflicts with an existing registration"))
+            {
+                LogHelper.LogInfo($"端口 {serverPort} 被HTTP.sys占用，尝试释放...");
+                UpdateStatusLabel($"端口 {serverPort} 被占用，尝试释放...");
+
+                bool released = ReleaseHttpSysPort(port);
+                if (released)
                 {
-                    LogHelper.LogInfo("开始启动HTTP服务器...");
-                    LogHelper.LogInfo("使用端口: " + serverPort);
-                    UpdateStatusLabel("开始启动HTTP服务器...");
-                    UpdateStatusLabel("使用端口: " + serverPort);
-
-                    string url1 = string.Format("http://localhost:{0}/", serverPort);
-                    string url2 = string.Format("http://127.0.0.1:{0}/", serverPort);
-
+                    LogHelper.LogInfo("HTTP.sys端口释放成功，重新启动...");
+                    UpdateStatusLabel("端口释放成功，重新启动...");
+                    System.Threading.Thread.Sleep(500);
+                    
                     httpListener = new HttpListener();
                     httpListener.Prefixes.Add(url1);
                     httpListener.Prefixes.Add(url2);
-                    LogHelper.LogInfo("添加HTTP前缀完成");
-                    UpdateStatusLabel("添加HTTP前缀完成");
+                    try { httpListener.Prefixes.Add(url3); canBindAllInterfaces = true; } catch { canBindAllInterfaces = false; }
+                    
                     httpListener.Start();
-                    LogHelper.LogInfo("HTTP服务器启动成功");
-                    UpdateStatusLabel("HTTP服务器启动成功");
-
                     httpServerThread = new Thread(HttpServerThread);
                     httpServerThread.IsBackground = true;
                     httpServerThread.Start();
-                    LogHelper.LogInfo("HTTP服务器线程已启动");
-                    UpdateStatusLabel("HTTP服务器线程已启动");
-
-                    HttpServerStarted();
-                    started = true;
-                    break;
+                    HttpServerStarted(canBindAllInterfaces);
                 }
-                catch (HttpListenerException ex) when (ex.ErrorCode == 5 || ex.Message.Contains("conflicts with an existing registration"))
+                else
                 {
-                    if (attempt == maxRetries)
-                    {
-                        throw new Exception($"端口 {serverPort} 被占用，无法启动服务器");
-                    }
-
-                    LogHelper.LogInfo($"端口 {serverPort} 被占用，尝试结束占用进程...");
-                    UpdateStatusLabel($"端口 {serverPort} 被占用，尝试结束占用进程...");
-
-                    bool killed = KillProcessUsingPort(port);
-                    if (killed)
-                    {
-                        MessageBox.Show($"端口 {serverPort} 被占用，已自动结束占用进程，正在重试...", "端口占用", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        System.Threading.Thread.Sleep(1000);
-                    }
-                    else
-                    {
-                        throw new Exception($"端口 {serverPort} 被占用，无法结束占用进程");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    throw;
+                    throw new Exception($"端口 {serverPort} 被占用，请以管理员身份运行程序或执行命令: netsh http add urlacl url=http://*:{port}/ user=Everyone");
                 }
             }
-
-            if (!started)
+            catch (Exception ex)
             {
-                throw new Exception($"端口 {serverPort} 启动失败");
+                throw new Exception($"启动HTTP服务器失败: {ex.Message}");
             }
+        }
+
+        private void HttpServerStarted(bool canBindAllInterfaces)
+        {
+            string localIP = GetLocalIP();
+            string message;
+            if (canBindAllInterfaces)
+            {
+                message = string.Format("统计服务器已启动！本地访问：http://localhost:{0}/, 网络访问：http://{1}:{0}/", serverPort, localIP);
+            }
+            else
+            {
+                message = string.Format("统计服务器已启动！仅本地访问：http://localhost:{0}/ (如需网络访问，请以管理员身份运行或配置URL保留)", serverPort);
+            }
+            LogHelper.LogInfo(message);
+            UpdateStatusLabel(message);
         }
 
         private bool KillProcessUsingPort(int port)
@@ -358,9 +373,24 @@ namespace DbProcedureCaller
                     string httpMethod = request.HttpMethod;
                     byte[] responseBytes = GetHtmlContent(url, request);
 
+                    string path = url;
+                    int queryIndex = url.IndexOf('?');
+                    if (queryIndex > 0)
+                    {
+                        path = url.Substring(0, queryIndex);
+                    }
+
                     if (IsJsonEndpoint(url, httpMethod))
                     {
                         response.ContentType = "application/json; charset=utf-8";
+                    }
+                    else if (path.EndsWith(".js"))
+                    {
+                        response.ContentType = "application/javascript; charset=utf-8";
+                    }
+                    else if (path.EndsWith(".css"))
+                    {
+                        response.ContentType = "text/css; charset=utf-8";
                     }
                     else
                     {
@@ -434,6 +464,13 @@ namespace DbProcedureCaller
             }
 
             string fileName = url.TrimStart('/');
+            
+            int queryIndex = fileName.IndexOf('?');
+            if (queryIndex > 0)
+            {
+                fileName = fileName.Substring(0, queryIndex);
+            }
+            
             if (!fileName.EndsWith(".html") && !fileName.EndsWith(".htm") && !fileName.EndsWith(".css") && !fileName.EndsWith(".js"))
             {
                 fileName += ".html";
@@ -441,7 +478,12 @@ namespace DbProcedureCaller
             string filePath = GetTemplatePath(fileName);
             if (File.Exists(filePath))
             {
+                LogHelper.LogInfo($"正在返回静态文件: {filePath}");
                 return Encoding.UTF8.GetBytes(File.ReadAllText(filePath));
+            }
+            else
+            {
+                LogHelper.LogInfo($"文件不存在: {filePath}");
             }
 
             string notFoundHtml = @"<!DOCTYPE html>
@@ -578,7 +620,8 @@ namespace DbProcedureCaller
         private string GetTemplatePath(string fileName)
         {
             string exePath = Application.StartupPath;
-            // 从 exe 路径往上找，直到找到 DbProcedureCaller 目录
+            LogHelper.LogInfo($"EXE路径: {exePath}");
+            
             string currentDir = exePath;
             while (currentDir != null && !Path.GetFileName(currentDir).Equals("DbProcedureCaller", StringComparison.OrdinalIgnoreCase))
             {
@@ -587,11 +630,11 @@ namespace DbProcedureCaller
             
             if (currentDir == null)
             {
-                // 如果找不到，尝试从 exe 路径往上三级（备用方案）
                 currentDir = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(exePath)));
             }
             
             string templatePath = Path.Combine(currentDir, "templates", fileName);
+            LogHelper.LogInfo($"模板路径: {templatePath}");
             return templatePath;
         }
 

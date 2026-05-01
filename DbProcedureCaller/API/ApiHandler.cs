@@ -1,8 +1,10 @@
 using System;
 using System.Data;
+using System.Data.SqlClient;
 using System.IO;
 using System.Text;
 using System.Web;
+using DbProcedureCaller.Config;
 using DbProcedureCaller.Core;
 using DbProcedureCaller.Services;
 
@@ -72,6 +74,10 @@ namespace DbProcedureCaller.API
                 else if (url == "/get-hospital-info" && httpMethod == "GET")
                 {
                     return HandleGetHospitalInfo();
+                }
+                else if (url == "/test-db-data" && httpMethod == "GET")
+                {
+                    return HandleTestDbData();
                 }
                 else if (url == "/update-db-config" && httpMethod == "POST")
                 {
@@ -412,6 +418,64 @@ namespace DbProcedureCaller.API
             string hospitalName = _dailyAnalysisService.GetHospitalName();
             string encodedName = HttpUtility.HtmlEncode(hospitalName);
             return Encoding.UTF8.GetBytes($"{{\"success\": true, \"hospitalName\": \"{encodedName}\"}}");
+        }
+
+        private byte[] HandleTestDbData()
+        {
+            try
+            {
+                string connectionString = ConnectionStrings.GetConnectionString();
+                if (string.IsNullOrEmpty(connectionString))
+                {
+                    return Encoding.UTF8.GetBytes("{\"success\": false, \"error\": \"数据库连接字符串为空\"}");
+                }
+
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+
+                    string taskCountSql = "SELECT COUNT(*) FROM EXAM_TASK WITH(NOLOCK) WHERE IS_DEL = 0";
+                    string reportCountSql = "SELECT COUNT(*) FROM EXAM_REPORT WITH(NOLOCK)";
+                    string dateRangeSql = "SELECT MIN(CREATED_AT) as MinDate, MAX(CREATED_AT) as MaxDate FROM EXAM_TASK WITH(NOLOCK) WHERE IS_DEL = 0";
+
+                    int taskCount = 0;
+                    int reportCount = 0;
+                    string minDate = "";
+                    string maxDate = "";
+
+                    using (SqlCommand cmd = new SqlCommand(taskCountSql, conn))
+                    {
+                        object result = cmd.ExecuteScalar();
+                        taskCount = result != null ? (int)result : 0;
+                    }
+
+                    using (SqlCommand cmd = new SqlCommand(reportCountSql, conn))
+                    {
+                        object result = cmd.ExecuteScalar();
+                        reportCount = result != null ? (int)result : 0;
+                    }
+
+                    using (SqlCommand cmd = new SqlCommand(dateRangeSql, conn))
+                    {
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                minDate = reader["MinDate"]?.ToString() ?? "";
+                                maxDate = reader["MaxDate"]?.ToString() ?? "";
+                            }
+                        }
+                    }
+
+                    return Encoding.UTF8.GetBytes(
+                        $"{{\"success\": true, \"taskCount\": {taskCount}, \"reportCount\": {reportCount}, \"minDate\": \"{minDate}\", \"maxDate\": \"{maxDate}\"}}");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogHelper.LogException(ex, "测试数据库数据失败");
+                return Encoding.UTF8.GetBytes($"{{\"success\": false, \"error\": \"{ex.Message}\"}}");
+            }
         }
 
         private byte[] HandleUpdateDbConfig(Stream inputStream)
