@@ -577,8 +577,21 @@ namespace DbProcedureCaller
 
         private string GetTemplatePath(string fileName)
         {
-            string projectRoot = Path.GetDirectoryName(Path.GetDirectoryName(Application.StartupPath));
-            string templatePath = Path.Combine(projectRoot, "templates", fileName);
+            string exePath = Application.StartupPath;
+            // 从 exe 路径往上找，直到找到 DbProcedureCaller 目录
+            string currentDir = exePath;
+            while (currentDir != null && !Path.GetFileName(currentDir).Equals("DbProcedureCaller", StringComparison.OrdinalIgnoreCase))
+            {
+                currentDir = Path.GetDirectoryName(currentDir);
+            }
+            
+            if (currentDir == null)
+            {
+                // 如果找不到，尝试从 exe 路径往上三级（备用方案）
+                currentDir = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(exePath)));
+            }
+            
+            string templatePath = Path.Combine(currentDir, "templates", fileName);
             return templatePath;
         }
 
